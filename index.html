@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HumanCraft Pro 2</title>
+    <title>HumanCraft Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -203,11 +203,15 @@
             signOut
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-        // TODO: replace these with your real env-injected values or paste directly
+        // Firebase config for Humancraft
         const firebaseConfig = {
-            apiKey: "AIzaSyCJ5JfYwYIdAfga-uoDn8CcRPobc@aKnas",
-            authDomain: "humancraft-f45d7.firebaseapp.com",
-            projectId: "humancraft-f45d7",
+          apiKey: "AIzaSyDnTcadnWIj5ovKNMO3Io2FabxN35S1jZU",
+          authDomain: "humancraft-9ca83.firebaseapp.com",
+          projectId: "humancraft-9ca83",
+          storageBucket: "humancraft-9ca83.firebasestorage.app",
+          messagingSenderId: "582231713357",
+          appId: "1:582231713357:web:1f133e9ca13c48a055de04",
+          measurementId: "G-LC7H7LHW6K"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -365,9 +369,9 @@
                         <input
                             id="profileSearchInput"
                             type="text"
-                            placeholder="Search by display name..."
+                            placeholder="Search by display name or username..."
                             class="w-full px-3 py-2 rounded-xl border border-slate-200 text-[11px] outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                            oninput="searchProfilesFromProfile()"
+                            oninput="searchPlayersCombined(false)"
                         />
                         <div id="profileSearchResults" class="space-y-1 max-h-44 overflow-y-auto custom-scroll"></div>
                     </div>
@@ -452,7 +456,7 @@
     <span id="toastMsg"></span>
 </div>
 
-<!-- Player name setup -->
+<!-- Player auth overlay -->
 <div id="playerOverlay" class="fixed inset-0 bg-slate-900/80 backdrop-blur-xl z-[120] flex items-center justify-center hidden">
     <div class="bg-white rounded-[28px] px-7 py-8 w-full max-w-sm mx-4 shadow-2xl border border-slate-100">
         <h2 class="text-lg font-black text-slate-900 mb-2 flex items-center gap-2">
@@ -460,16 +464,77 @@
             Welcome to the Lab
         </h2>
         <p class="text-xs text-slate-500 mb-4">
-            Play as a guest or sign in with Google to sync across devices.
+            Choose how you want to create or enter your account.
         </p>
-        <div class="space-y-3">
+        <div class="grid grid-cols-3 gap-2 mb-4 text-[11px] font-semibold">
+            <button id="btnAuthSignup"
+                    onclick="setAuthMode('signup')"
+                    class="py-2 rounded-xl border border-slate-200 bg-slate-100">
+                Sign up
+            </button>
+            <button id="btnAuthLogin"
+                    onclick="setAuthMode('login')"
+                    class="py-2 rounded-xl border border-slate-200 bg-white">
+                Log in
+            </button>
+            <button id="btnAuthGoogle"
+                    onclick="setAuthMode('google')"
+                    class="py-2 rounded-xl border border-slate-200 bg-white">
+                Google
+            </button>
+        </div>
+        <div id="authSignupPanel" class="space-y-3">
             <input
-                id="playerNameInput"
+                id="signupDisplayNameInput"
                 type="text"
-                maxlength="18"
-                placeholder="Your lab name"
+                maxlength="24"
+                placeholder="Display name"
                 class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
             />
+            <input
+                id="signupUsernameInput"
+                type="text"
+                maxlength="20"
+                placeholder="Username (no @, letters/numbers/_)"
+                class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            />
+            <input
+                id="signupPasswordInput"
+                type="password"
+                maxlength="64"
+                placeholder="Password"
+                class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            />
+            <button
+                onclick="submitSignup()"
+                class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black uppercase tracking-[0.18em]"
+            >
+                Create account
+            </button>
+        </div>
+        <div id="authLoginPanel" class="space-y-3 hidden">
+            <input
+                id="loginUsernameInput"
+                type="text"
+                maxlength="20"
+                placeholder="Username"
+                class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            />
+            <input
+                id="loginPasswordInput"
+                type="password"
+                maxlength="64"
+                placeholder="Password"
+                class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            />
+            <button
+                onclick="submitLogin()"
+                class="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-black uppercase tracking-[0.18em]"
+            >
+                Log in
+            </button>
+        </div>
+        <div id="authGooglePanel" class="space-y-3 hidden">
             <button
                 onclick="signInWithGoogle()"
                 class="w-full py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-xs text-slate-700 rounded-xl font-semibold flex items-center justify-center gap-2"
@@ -477,13 +542,11 @@
                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-4 h-4" alt="">
                 Continue with Google
             </button>
-            <button
-                onclick="confirmPlayerName()"
-                class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black uppercase tracking-[0.18em]"
-            >
-                Enter Lab
-            </button>
+            <p class="text-[11px] text-slate-500">
+                After signing in, you&#39;ll choose your display name and username.
+            </p>
         </div>
+        <p id="authError" class="mt-3 text-[11px] text-rose-500 min-h-[14px]"></p>
     </div>
 </div>
 
@@ -552,7 +615,7 @@
                             <p class="text-[11px] text-slate-200">Coins: <span id="profileCardCoins">0</span></p>
                             <p class="text-[11px] text-slate-200">Play Time: <span id="profileCardPlaytime">0m</span></p>
                         </div>
-                        <button onclick="enterProfileEditMode()" class="px-3 py-1.5 rounded-xl bg-[#5865f2] hover:bg-[#4752c4] text-[11px] font-semibold">
+                        <button id="profileCustomizeBtn" onclick="enterProfileEditMode()" class="px-3 py-1.5 rounded-xl bg-[#5865f2] hover:bg-[#4752c4] text-[11px] font-semibold">
                             Customize
                         </button>
                     </div>
@@ -605,34 +668,15 @@
         </div>
         <div class="px-6 py-4 space-y-4 text-xs">
             <div class="bg-[#2b2d31] rounded-2xl p-3 border border-[#3f4247] space-y-2">
-                <p class="uppercase text-[10px] text-slate-400 font-semibold">Search by Username</p>
-                <div class="flex gap-2">
-                    <input
-                        id="profileUsernameSearchInput"
-                        type="text"
-                        placeholder="Enter @username..."
-                        class="flex-1 px-3 py-1.5 rounded-lg bg-[#1e1f22] border border-[#3f4247] text-[11px] outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    />
-                    <button
-                        onclick="searchByUsername()"
-                        class="px-3 py-1.5 rounded-lg bg-[#313338] hover:bg-[#3f4147] text-[11px]"
-                    >
-                        Go
-                    </button>
-                </div>
-                <div id="profileUsernameSearchResults" class="space-y-1 max-h-40 overflow-y-auto custom-scroll text-[11px]"></div>
-            </div>
-
-            <div class="bg-[#2b2d31] rounded-2xl p-3 border border-[#3f4247] space-y-2">
-                <p class="uppercase text-[10px] text-slate-400 font-semibold">Search by Display Name</p>
+                <p class="uppercase text-[10px] text-slate-400 font-semibold">Search Players</p>
                 <input
-                    id="moreDisplaySearchInput"
+                    id="moreSearchInput"
                     type="text"
-                    placeholder="Search by display name..."
+                    placeholder="Search by display name or username..."
                     class="w-full px-3 py-1.5 rounded-lg bg-[#1e1f22] border border-[#3f4247] text-[11px] outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    oninput="searchProfilesFromProfile(true)"
+                    oninput="searchPlayersCombined(true)"
                 />
-                <div id="profileSearchResults" class="space-y-1 max-h-40 overflow-y-auto custom-scroll text-[11px]"></div>
+                <div id="moreSearchResults" class="space-y-1 max-h-40 overflow-y-auto custom-scroll text-[11px]"></div>
             </div>
         </div>
     </div>
@@ -697,7 +741,9 @@
     let animationFrameId = null;
     let players = [];
     let currentPlayer = null;
+    let viewedProfile = null;
     let playtimeIntervalId = null;
+    let authMode = 'signup';
 
     function init() {
         lucide.createIcons();
@@ -705,37 +751,14 @@
         renderInventory();
         updateUI();
 
-        // auth state listener (for Google accounts)
+        // auth state listener (no auto username)
         if (window._hcAuth && window._hcOnAuthStateChanged) {
-            window._hcOnAuthStateChanged(window._hcAuth, (user) => {
-                if (user) {
-                    // if logged in, tie current player to google uid (but keep existing coins)
-                    const uid = user.uid;
-                    const name = user.displayName || 'Google Player';
-                    if (!currentPlayer) {
-                        const id = uid;
-                        const handle = '@' + (name.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 10) || 'player') + '_' + Math.floor(Math.random() * 999);
-                        currentPlayer = {
-                            id,
-                            name,
-                            handle,
-                            displayName: name,
-                            coins: state.coins,
-                            playTimeMs: 0,
-                            lastSeen: Date.now()
-                        };
-                        players.push(currentPlayer);
-                        savePlayers();
-                        localStorage.setItem(STORAGE_KEYS.currentPlayerId, id);
-                    }
-                    renderProfile();
-                    sendProfileToBackend().catch(() => {});
-                }
-            });
+            window._hcOnAuthStateChanged(window._hcAuth, () => {});
         }
 
         loadPlayers();
         ensurePlayer();
+        setAuthMode('signup');
         startPlaytimeTracking();
 
         // Fade out intro after a short delay
@@ -784,6 +807,28 @@
         }
         if (!currentPlayer) {
             document.getElementById('playerOverlay').classList.remove('hidden');
+        }
+    }
+
+    function setAuthMode(mode) {
+        authMode = mode;
+        const signupPanel = document.getElementById('authSignupPanel');
+        const loginPanel = document.getElementById('authLoginPanel');
+        const googlePanel = document.getElementById('authGooglePanel');
+        const errEl = document.getElementById('authError');
+        if (errEl) errEl.textContent = '';
+        const btnSignup = document.getElementById('btnAuthSignup');
+        const btnLogin = document.getElementById('btnAuthLogin');
+        const btnGoogle = document.getElementById('btnAuthGoogle');
+        if (signupPanel && loginPanel && googlePanel) {
+            signupPanel.classList.toggle('hidden', mode !== 'signup');
+            loginPanel.classList.toggle('hidden', mode !== 'login');
+            googlePanel.classList.toggle('hidden', mode !== 'google');
+        }
+        if (btnSignup && btnLogin && btnGoogle) {
+            btnSignup.classList.toggle('bg-slate-100', mode === 'signup');
+            btnLogin.classList.toggle('bg-slate-100', mode === 'login');
+            btnGoogle.classList.toggle('bg-slate-100', mode === 'google');
         }
     }
 
@@ -1132,8 +1177,10 @@
     }
 
     function openProfileOverlay() {
+        if (!currentPlayer) return;
+        viewedProfile = currentPlayer;
         document.getElementById('profileOverlay').classList.remove('hidden');
-        loadProfileOverlay(false);
+        loadProfileOverlay(false, viewedProfile);
         document.getElementById('tabProfile').classList.add('tab-active');
     }
 
@@ -1152,14 +1199,15 @@
         document.getElementById('tabMore').classList.remove('tab-active');
     }
 
-    function loadProfileOverlay(editing) {
-        if (!currentPlayer) return;
-        const displayName = currentPlayer.displayName || currentPlayer.name || 'Unknown';
-        const username = currentPlayer.username || (currentPlayer.handle ? currentPlayer.handle.replace('@', '') : 'player');
-        const themeColor = currentPlayer.themeColor || '#5865F2';
-        const bio = currentPlayer.bio || 'No bio yet. Click customize to add one.';
-        const coins = currentPlayer.coins || 0;
-        const mins = Math.floor((currentPlayer.playTimeMs || 0) / 60000);
+    function loadProfileOverlay(editing, player = null) {
+        const p = player || currentPlayer;
+        if (!p) return;
+        const displayName = p.displayName || p.name || 'Unknown';
+        const username = p.username || (p.handle ? p.handle.replace('@', '') : 'player');
+        const themeColor = p.themeColor || '#5865F2';
+        const bio = p.bio || 'No bio yet. Click customize to add one.';
+        const coins = p.coins || 0;
+        const mins = Math.floor((p.playTimeMs || 0) / 60000);
 
         const accent = document.getElementById('profileAccent');
         const avatarSpan = document.getElementById('profileCardAvatar');
@@ -1171,7 +1219,7 @@
         const coinsEl = document.getElementById('profileCardCoins');
         const ptEl = document.getElementById('profileCardPlaytime');
 
-        const bannerUrl = currentPlayer.bannerUrl || '';
+        const bannerUrl = p.bannerUrl || '';
         if (accent) {
             if (bannerUrl) {
                 accent.style.backgroundImage = `url('${bannerUrl}')`;
@@ -1190,7 +1238,7 @@
         if (ptEl) ptEl.textContent = `${mins}m`;
 
         const initials = displayName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-        const pfpUrl = currentPlayer.pfpUrl || '';
+        const pfpUrl = p.pfpUrl || '';
         if (avatarImg && avatarSpan) {
             if (pfpUrl) {
                 avatarImg.src = pfpUrl;
@@ -1205,15 +1253,17 @@
 
         const editSection = document.getElementById('profileEditSection');
         const viewSection = document.getElementById('profileViewSection');
+        const customizeBtn = document.getElementById('profileCustomizeBtn');
+        const isOwn = currentPlayer && p.id === currentPlayer.id;
+        if (customizeBtn) customizeBtn.classList.toggle('hidden', !isOwn);
         if (editSection && viewSection) {
-            editSection.classList.toggle('hidden', !editing);
-            viewSection.classList.toggle('hidden', editing);
+            editSection.classList.toggle('hidden', !editing || !isOwn);
+            viewSection.classList.toggle('hidden', editing && isOwn);
         }
-
-        if (editing) {
+        if (editing && isOwn) {
             document.getElementById('profileEditDisplayNameInput').value = displayName;
             document.getElementById('profileEditUsernameInput').value = username;
-            document.getElementById('profileEditBioInput').value = currentPlayer.bio || '';
+            document.getElementById('profileEditBioInput').value = p.bio || '';
             document.getElementById('profileEditThemeInput').value = themeColor;
             document.getElementById('profileEditError').textContent = '';
             const avatarFile = document.getElementById('profileEditAvatarFile');
@@ -1224,7 +1274,8 @@
     }
 
     function enterProfileEditMode() {
-        loadProfileOverlay(true);
+        if (!currentPlayer || !viewedProfile || currentPlayer.id !== viewedProfile.id) return;
+        loadProfileOverlay(true, currentPlayer);
     }
 
     function cancelProfileEdit() {
@@ -1244,7 +1295,10 @@
 
         const displayName = (dnInput.value || '').trim() || currentPlayer.displayName || currentPlayer.name || 'Unknown';
         let username = (unInput.value || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
-        if (!username) username = (currentPlayer.username || 'player');
+        if (!username) {
+            errorEl.textContent = 'Username is required.';
+            return;
+        }
         const bio = (bioInput.value || '').trim();
         let themeColor = (themeInput.value || '').trim() || '#5865F2';
         if (!/^#?[0-9a-fA-F]{6}$/.test(themeColor)) {
@@ -1353,45 +1407,82 @@
         });
     }
 
-    async function searchProfilesFromProfile(fromMoreOverlay = false) {
-        const termSourceId = fromMoreOverlay ? 'moreDisplaySearchInput' : 'profileSearchInput';
-        const term = (document.getElementById(termSourceId)?.value || '').trim().toLowerCase();
-        const container = document.getElementById('profileSearchResults');
-        if (!container) return;
-        container.innerHTML = '';
-        if (!term || !window._hcDb || !window._hcFirestoreFns) return;
-
+    async function searchPlayersCombined(fromMoreOverlay = false) {
+        if (!window._hcDb || !window._hcFirestoreFns) return;
         const { getDocs, collection, query, where, orderBy, limit } = window._hcFirestoreFns;
         const db = window._hcDb;
-
+        const termInputId = fromMoreOverlay ? 'moreSearchInput' : 'profileSearchInput';
+        const containerId = fromMoreOverlay ? 'moreSearchResults' : 'profileSearchResults';
+        const term = (document.getElementById(termInputId)?.value || '').trim().toLowerCase();
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        container.innerHTML = '';
+        if (!term) return;
         try {
-            const q = query(
+            const qDisplay = query(
                 collection(db, "players"),
                 where("displayNameLower", ">=", term),
                 where("displayNameLower", "<=", term + "\uf8ff"),
                 orderBy("displayNameLower"),
-                limit(20)
+                limit(15)
             );
-            const snap = await getDocs(q);
-            if (snap.empty) {
+            const qUser = query(
+                collection(db, "players"),
+                where("usernameLower", ">=", term),
+                where("usernameLower", "<=", term + "\uf8ff"),
+                orderBy("usernameLower"),
+                limit(15)
+            );
+            const [snapDisplay, snapUser] = await Promise.all([getDocs(qDisplay), getDocs(qUser)]);
+            const seen = new Set();
+            const results = [];
+            snapDisplay.forEach(docSnap => {
+                const data = docSnap.data();
+                const id = docSnap.id;
+                if (!seen.has(id)) {
+                    seen.add(id);
+                    results.push({ id, ...data });
+                }
+            });
+            snapUser.forEach(docSnap => {
+                const data = docSnap.data();
+                const id = docSnap.id;
+                if (!seen.has(id)) {
+                    seen.add(id);
+                    results.push({ id, ...data });
+                }
+            });
+            if (!results.length) {
                 container.innerHTML = '<p class="text-[11px] text-slate-400 py-1">No profiles found.</p>';
                 return;
             }
-            snap.forEach(docSnap => {
-                const p = docSnap.data();
-                const row = document.createElement('div');
-                row.className = 'flex items-center justify-between px-2 py-1 rounded-lg hover:bg-slate-50';
+            results.forEach(p => {
                 const mins = Math.floor((p.playTimeMs || 0) / 60000);
+                const row = document.createElement('div');
+                row.className = fromMoreOverlay
+                    ? 'flex items-center justify-between px-2 py-1 rounded-lg bg-[#1e1f22]'
+                    : 'flex items-center justify-between px-2 py-1 rounded-lg hover:bg-slate-50';
+                const usernameDisplay = p.username ? '@' + p.username : (p.handle || '');
                 row.innerHTML = `
                     <div class="flex flex-col">
-                        <span class="text-[11px] font-semibold text-slate-800">${p.displayName || p.name}</span>
-                        <span class="text-[10px] text-slate-400">${p.handle || ''}</span>
+                        <span class="text-[11px] font-semibold ${fromMoreOverlay ? 'text-slate-100' : 'text-slate-800'}">${p.displayName || p.name}</span>
+                        <span class="text-[10px] ${fromMoreOverlay ? 'text-slate-400' : 'text-slate-500'}">${usernameDisplay}</span>
                     </div>
-                    <div class="text-right">
-                        <span class="block text-[11px] font-bold text-amber-600">${(p.coins || 0).toLocaleString()}c</span>
-                        <span class="block text-[10px] text-slate-400">${mins}m</span>
+                    <div class="flex items-center gap-2">
+                        <div class="text-right mr-1">
+                            <span class="block text-[11px] font-bold text-amber-500">${(p.coins || 0).toLocaleString()}c</span>
+                            <span class="block text-[10px] ${fromMoreOverlay ? 'text-slate-400' : 'text-slate-500'}">${mins}m</span>
+                        </div>
+                        <button class="px-2 py-1 rounded-lg ${fromMoreOverlay ? 'bg-emerald-500 hover:bg-emerald-400' : 'bg-slate-900 hover:bg-slate-700'} text-[10px] text-white">
+                            Visit
+                        </button>
                     </div>
                 `;
+                const visitBtn = row.querySelector('button');
+                visitBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    openVisitedProfile(p);
+                };
                 container.appendChild(row);
             });
         } catch (err) {
@@ -1400,15 +1491,176 @@
         }
     }
 
+    function openVisitedProfile(player) {
+        viewedProfile = player;
+        document.getElementById('profileOverlay').classList.remove('hidden');
+        loadProfileOverlay(false, player);
+    }
+
     async function signInWithGoogle() {
-        if (!window._hcAuth || !window._hcSignInWithPopup || !window._hcAuthProvider) return;
+        if (!window._hcAuth || !window._hcSignInWithPopup || !window._hcAuthProvider || !window._hcDb || !window._hcFirestoreFns) return;
+        const { doc, getDoc, setDoc } = window._hcFirestoreFns;
+        const db = window._hcDb;
         try {
-            await window._hcSignInWithPopup(window._hcAuth, window._hcAuthProvider);
-            document.getElementById('playerOverlay').classList.add('hidden');
-            showToast('Signed in with Google');
+            const result = await window._hcSignInWithPopup(window._hcAuth, window._hcAuthProvider);
+            const user = result.user;
+            const uid = user.uid;
+            const ref = doc(db, "players", uid);
+            const snap = await getDoc(ref);
+            if (snap.exists()) {
+                const data = snap.data();
+                currentPlayer = { ...data, id: data.id || uid };
+                state.coins = currentPlayer.coins || 0;
+                save();
+                loadPlayers();
+                const idx = players.findIndex(p => p.id === currentPlayer.id);
+                if (idx === -1) players.push(currentPlayer);
+                localStorage.setItem(STORAGE_KEYS.currentPlayerId, currentPlayer.id);
+                document.getElementById('playerOverlay').classList.add('hidden');
+                renderProfile();
+                renderLeaderboard();
+                showToast('Signed in with Google');
+            } else {
+                setAuthMode('signup');
+                document.getElementById('playerOverlay').classList.remove('hidden');
+                const dnInput = document.getElementById('signupDisplayNameInput');
+                if (dnInput && user.displayName) dnInput.value = user.displayName;
+                showToast('Choose your display name & username');
+            }
         } catch (e) {
             console.warn(e);
             showToast('Google sign-in failed');
+        }
+    }
+
+    async function submitSignup() {
+        if (!window._hcDb || !window._hcFirestoreFns) return;
+        const { doc, setDoc, getDocs, collection, query, where, limit } = window._hcFirestoreFns;
+        const db = window._hcDb;
+        const displayNameInput = document.getElementById('signupDisplayNameInput');
+        const usernameInput = document.getElementById('signupUsernameInput');
+        const passwordInput = document.getElementById('signupPasswordInput');
+        const errEl = document.getElementById('authError');
+        const displayName = (displayNameInput.value || '').trim();
+        let username = (usernameInput.value || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+        const password = (passwordInput.value || '').trim();
+        if (!displayName || !username || !password) {
+            errEl.textContent = 'Display name, username, and password are required.';
+            return;
+        }
+        if (username.length < 3) {
+            errEl.textContent = 'Username must be at least 3 characters.';
+            return;
+        }
+        if (password.length < 4) {
+            errEl.textContent = 'Password must be at least 4 characters.';
+            return;
+        }
+        try {
+            const lower = username.toLowerCase();
+            const q = query(
+                collection(db, "players"),
+                where("usernameLower", "==", lower),
+                limit(1)
+            );
+            const snap = await getDocs(q);
+            if (!snap.empty) {
+                errEl.textContent = 'That username is already taken. Choose another.';
+                return;
+            }
+            const authUser = window._hcAuth ? window._hcAuth.currentUser : null;
+            const id = authUser ? authUser.uid : ('p_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6));
+            const handle = '@' + username;
+            currentPlayer = {
+                id,
+                name: displayName,
+                handle,
+                displayName,
+                username,
+                usernameLower: lower,
+                coins: state.coins,
+                playTimeMs: 0,
+                lastSeen: Date.now(),
+                password: password
+            };
+            players.push(currentPlayer);
+            savePlayers();
+            localStorage.setItem(STORAGE_KEYS.currentPlayerId, id);
+            const ref = doc(db, "players", id);
+            await setDoc(ref, {
+                id,
+                name: displayName,
+                handle,
+                displayName,
+                displayNameLower: displayName.toLowerCase(),
+                username,
+                usernameLower: lower,
+                bio: '',
+                themeColor: '#5865F2',
+                pfpUrl: '',
+                coins: currentPlayer.coins,
+                playTimeMs: currentPlayer.playTimeMs,
+                password: password,
+                updatedAt: Date.now()
+            }, { merge: true });
+            document.getElementById('playerOverlay').classList.add('hidden');
+            renderProfile();
+            renderLeaderboard();
+            showToast('Account created');
+        } catch (e) {
+            console.warn(e);
+            errEl.textContent = 'Error creating account.';
+        }
+    }
+
+    async function submitLogin() {
+        if (!window._hcDb || !window._hcFirestoreFns) return;
+        const { getDocs, collection, query, where, limit } = window._hcFirestoreFns;
+        const db = window._hcDb;
+        const usernameInput = document.getElementById('loginUsernameInput');
+        const passwordInput = document.getElementById('loginPasswordInput');
+        const errEl = document.getElementById('authError');
+        let username = (usernameInput.value || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+        const password = (passwordInput.value || '').trim();
+        if (!username || !password) {
+            errEl.textContent = 'Username and password are required.';
+            return;
+        }
+        try {
+            const lower = username.toLowerCase();
+            const q = query(
+                collection(db, "players"),
+                where("usernameLower", "==", lower),
+                limit(1)
+            );
+            const snap = await getDocs(q);
+            if (snap.empty) {
+                errEl.textContent = 'No account with that username.';
+                return;
+            }
+            const data = snap.docs[0].data();
+            if (data.password !== password) {
+                errEl.textContent = 'Incorrect password.';
+                return;
+            }
+            currentPlayer = {
+                ...data,
+                id: data.id,
+                lastSeen: Date.now()
+            };
+            state.coins = currentPlayer.coins || 0;
+            save();
+            loadPlayers();
+            const idx = players.findIndex(p => p.id === currentPlayer.id);
+            if (idx === -1) players.push(currentPlayer);
+            localStorage.setItem(STORAGE_KEYS.currentPlayerId, currentPlayer.id);
+            document.getElementById('playerOverlay').classList.add('hidden');
+            renderProfile();
+            renderLeaderboard();
+            showToast('Logged in');
+        } catch (e) {
+            console.warn(e);
+            errEl.textContent = 'Error logging in.';
         }
     }
 
