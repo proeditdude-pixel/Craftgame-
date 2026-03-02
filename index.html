@@ -1294,7 +1294,8 @@
         if (!dnInput || !unInput || !bioInput || !themeInput || !errorEl) return;
 
         const displayName = (dnInput.value || '').trim() || currentPlayer.displayName || currentPlayer.name || 'Unknown';
-        let username = (unInput.value || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+        const rawUsername = (unInput.value || '').trim();
+        let username = rawUsername;
         if (!username) {
             errorEl.textContent = 'Username is required.';
             return;
@@ -1542,7 +1543,8 @@
         const passwordInput = document.getElementById('signupPasswordInput');
         const errEl = document.getElementById('authError');
         const displayName = (displayNameInput.value || '').trim();
-        let username = (usernameInput.value || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+        const rawUsername = (usernameInput.value || '').trim();
+        let username = rawUsername;
         const password = (passwordInput.value || '').trim();
         if (!displayName || !username || !password) {
             errEl.textContent = 'Display name, username, and password are required.';
@@ -1620,7 +1622,8 @@
         const usernameInput = document.getElementById('loginUsernameInput');
         const passwordInput = document.getElementById('loginPasswordInput');
         const errEl = document.getElementById('authError');
-        let username = (usernameInput.value || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+        const rawUsername = (usernameInput.value || '').trim();
+        let username = rawUsername;
         const password = (passwordInput.value || '').trim();
         if (!username || !password) {
             errEl.textContent = 'Username and password are required.';
