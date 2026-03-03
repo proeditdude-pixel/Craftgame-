@@ -271,6 +271,10 @@
                     <i data-lucide="shopping-bag" class="w-5 h-5"></i>
                     <span class="hidden md:inline font-bold text-sm">Shop</span>
                 </button>
+                <button onclick="switchTab('chat')" id="tabChat" class="w-full flex items-center gap-3 p-3 rounded-xl transition-all text-slate-400">
+                    <i data-lucide="message-circle" class="w-5 h-5"></i>
+                    <span class="hidden md:inline font-bold text-sm">Chat</span>
+                </button>
             </nav>
 
             <div id="inventoryContainer">
@@ -379,6 +383,43 @@
                             <div><h4 class="font-bold text-xs uppercase">Speed Click</h4><p class="text-[8px] text-slate-400">No Spawn Delay</p></div>
                         </div>
                         <span class="bg-indigo-600 text-white px-2 py-1 rounded text-[10px] font-black">10K</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="chatContainer" class="hidden h-full text-xs">
+                <div class="flex flex-col h-full">
+                    <div class="px-3 py-2 flex items-center justify-between">
+                        <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Chat</h3>
+                        <button onclick="loadChatConversations()" class="text-[10px] text-indigo-500 font-semibold">
+                            Refresh
+                        </button>
+                    </div>
+                    <div class="flex-1 flex border-t border-slate-200 bg-white rounded-2xl mx-2 overflow-hidden">
+                        <div class="w-32 md:w-48 border-r border-slate-200 flex flex-col">
+                            <div class="px-2 py-2 border-b border-slate-200">
+                                <input id="chatNewUsernameInput" type="text" placeholder="username..."
+                                       class="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-[11px] outline-none">
+                                <button onclick="startDmFromUsername()"
+                                        class="mt-1 w-full px-2 py-1.5 rounded-lg bg-slate-900 text-white text-[10px] font-semibold">
+                                    DM
+                                </button>
+                            </div>
+                            <div id="chatConversationList" class="flex-1 overflow-y-auto custom-scroll text-[11px]"></div>
+                        </div>
+                        <div class="flex-1 flex flex-col">
+                            <div id="chatMessages" class="flex-1 overflow-y-auto custom-scroll px-3 py-2 text-[11px] space-y-1 bg-slate-50"></div>
+                            <div class="border-t border-slate-200 p-2 space-y-1 bg-white">
+                                <textarea id="chatInput" rows="2" placeholder="Type a message..."
+                                          class="w-full px-3 py-1.5 rounded-xl border border-slate-200 text-[11px] outline-none"></textarea>
+                                <div class="flex items-center gap-2">
+                                    <button onclick="sendChatMessage()"
+                                            class="ml-auto px-3 py-1.5 rounded-xl bg-indigo-600 text-white text-[11px] font-semibold">
+                                        Send
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -594,9 +635,16 @@
                             <p class="text-[11px] text-slate-200">Coins: <span id="profileCardCoins">0</span></p>
                             <p class="text-[11px] text-slate-200">Play Time: <span id="profileCardPlaytime">0m</span></p>
                         </div>
-                        <button id="profileCustomizeBtn" onclick="enterProfileEditMode()" class="px-3 py-1.5 rounded-xl bg-[#5865f2] hover:bg-[#4752c4] text-[11px] font-semibold">
-                            Customize
-                        </button>
+                        <div class="flex flex-col gap-1">
+                            <button id="profileCustomizeBtn" onclick="enterProfileEditMode()" class="px-3 py-1.5 rounded-xl bg-[#5865f2] hover:bg-[#4752c4] text-[11px] font-semibold">
+                                Customize
+                            </button>
+                            <button id="profileDmBtn"
+                                    onclick="openDmWithViewed()"
+                                    class="px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-[11px] font-semibold hidden">
+                                Message
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -911,7 +959,7 @@
         "Coco+Coco": { name: "Melon", emoji: "🍉", rarity: "normal", flavor: "Mix Melon with coco can get Max" },
         "Bobby+Bobby": { name: "Femboy", emoji: "🧔🏻‍♀️", rarity: "diamond", flavor: "aka trans" },
         "Bobby+Femboy": { name: "Donald", emoji: "🫃", rarity: "gold", flavor: "og femboy" },
-        "Alien+Virus": { name: "Monster", emoji:"🍾🍾", rarity: "glitch", flavor: "drink" },
+        "Alien+Virus": { name: "Monster", emoji: "🧌", rarity: "glitch", flavor: "drink" },
     };
 
     const STORAGE_KEYS = {
@@ -935,6 +983,8 @@
     let dragOffset = { x: 0, y: 0 };
     let animationFrameId = null;
     let isOverTrashZone = false;
+    let chatConversations = [];
+    let activeConvId = null;
     let players = [];
     let globalPlayers = [];
     let currentPlayer = null;
@@ -1697,9 +1747,13 @@
         document.getElementById('inventoryContainer').classList.toggle('hidden', t !== 'inventory');
         document.getElementById('libraryContainer').classList.toggle('hidden', t !== 'library');
         document.getElementById('shopContainer').classList.toggle('hidden', t !== 'shop');
+        const chat = document.getElementById('chatContainer');
+        if (chat) chat.classList.toggle('hidden', t !== 'chat');
         document.getElementById('tabInv').classList.toggle('tab-active', t === 'inventory');
         document.getElementById('tabLib').classList.toggle('tab-active', t === 'library');
         document.getElementById('tabShop').classList.toggle('tab-active', t === 'shop');
+        const tabChat = document.getElementById('tabChat');
+        if (tabChat) tabChat.classList.toggle('tab-active', t === 'chat');
         if (t === 'library') updateLibrary();
     }
 
@@ -2031,6 +2085,134 @@
             reader.onerror = (e) => reject(e);
             reader.readAsDataURL(file);
         });
+    }
+
+    // ------------------------- Simple DM chat (text only) -------------------------
+
+    function makeDirectConvId(a, b) {
+        return [a, b].sort().join('_');
+    }
+
+    async function ensureConversationWith(targetUid, targetPlayer) {
+        if (!window._hcDb || !window._hcDbFns || !currentPlayer || !currentPlayer.id) return;
+        const { ref, get, set } = window._hcDbFns;
+        const myUid = currentPlayer.id;
+        const convId = makeDirectConvId(myUid, targetUid);
+
+        const convRef = ref(window._hcDb, `userConversations/${myUid}/${convId}`);
+        const snap = await get(convRef);
+        if (!snap.exists()) {
+            const name = targetPlayer?.displayName || targetPlayer?.name || '@user';
+            const meta = {
+                convId,
+                isGroup: false,
+                otherUid: targetUid,
+                name,
+                lastMessage: '',
+                lastAt: Date.now()
+            };
+            await Promise.all([
+                set(ref(window._hcDb, `userConversations/${myUid}/${convId}`), meta),
+                set(ref(window._hcDb, `userConversations/${targetUid}/${convId}`), {
+                    ...meta,
+                    otherUid: myUid
+                })
+            ]);
+        }
+        activeConvId = convId;
+        await loadChatConversations();
+        await loadChatMessages(convId);
+    }
+
+    async function loadChatConversations() {
+        if (!window._hcDb || !window._hcDbFns || !currentPlayer || !currentPlayer.id) return;
+        const { ref, get } = window._hcDbFns;
+        const snap = await get(ref(window._hcDb, `userConversations/${currentPlayer.id}`));
+        chatConversations = [];
+        const list = document.getElementById('chatConversationList');
+        if (!list) return;
+        list.innerHTML = '';
+        if (!snap.exists()) return;
+        const val = snap.val() || {};
+        chatConversations = Object.values(val).sort((a, b) => (b.lastAt || 0) - (a.lastAt || 0));
+        chatConversations.forEach(c => {
+            const btn = document.createElement('button');
+            btn.className = 'w-full text-left px-2 py-1.5 rounded-lg hover:bg-slate-100';
+            btn.innerHTML = `<div class="flex flex-col">
+                <span class="text-[11px] font-semibold">${escapeHtml(c.name || 'Chat')}</span>
+                <span class="text-[10px] text-slate-500 truncate">${escapeHtml(c.lastMessage || '')}</span>
+            </div>`;
+            btn.onclick = () => { activeConvId = c.convId; loadChatMessages(c.convId); };
+            list.appendChild(btn);
+        });
+    }
+
+    async function loadChatMessages(convId) {
+        if (!window._hcDb || !window._hcDbFns) return;
+        const { ref, get } = window._hcDbFns;
+        const snap = await get(ref(window._hcDb, `messages/${convId}`));
+        const msgsEl = document.getElementById('chatMessages');
+        if (!msgsEl) return;
+        msgsEl.innerHTML = '';
+        if (!snap.exists()) return;
+        const val = snap.val() || {};
+        const msgs = Object.entries(val).map(([id, m]) => ({ id, ...m }))
+            .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+        msgs.forEach(m => {
+            const mine = currentPlayer && m.from === currentPlayer.id;
+            const row = document.createElement('div');
+            row.className = 'flex ' + (mine ? 'justify-end' : 'justify-start');
+            const bubble = document.createElement('div');
+            bubble.className = 'max-w-[80%] px-2 py-1.5 rounded-xl text-[11px] ' +
+                (mine ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-800');
+            bubble.textContent = m.text || '';
+            row.appendChild(bubble);
+            msgsEl.appendChild(row);
+        });
+        msgsEl.scrollTop = msgsEl.scrollHeight;
+    }
+
+    async function sendChatMessage() {
+        if (!currentPlayer || !activeConvId || !window._hcDb || !window._hcDbFns) return;
+        const { ref, push, set, update } = window._hcDbFns;
+        const input = document.getElementById('chatInput');
+        const text = (input?.value || '').trim();
+        if (!text) return;
+        const msgRef = push(ref(window._hcDb, `messages/${activeConvId}`));
+        const now = Date.now();
+        await set(msgRef, {
+            from: currentPlayer.id,
+            text,
+            type: 'text',
+            createdAt: now
+        });
+        await update(ref(window._hcDb, `userConversations/${currentPlayer.id}/${activeConvId}`), {
+            lastMessage: text,
+            lastAt: now
+        });
+        if (input) input.value = '';
+        await loadChatMessages(activeConvId);
+        await loadChatConversations();
+    }
+
+    async function startDmFromUsername() {
+        const input = document.getElementById('chatNewUsernameInput');
+        if (!input) return;
+        const raw = (input.value || '').trim().toLowerCase().replace(/^@/, '');
+        if (!raw) { showToast('Enter username'); return; }
+        if (!window._hcDb || !window._hcDbFns) { showToast('Firebase not ready'); return; }
+        const { ref, query, orderByChild, equalTo, limitToFirst, get } = window._hcDbFns;
+        const snap = await get(query(ref(window._hcDb, 'players'),
+            orderByChild('usernameLower'),
+            equalTo(raw),
+            limitToFirst(1)
+        ));
+        if (!snap.exists()) { showToast('No such user'); return; }
+        let target = null;
+        snap.forEach(ch => { if (!target) target = ch.val(); });
+        if (!target?.id) { showToast('No such user'); return; }
+        await ensureConversationWith(target.id, target);
+        switchTab('chat');
     }
 
     // ------------------------- Redeem codes -------------------------
@@ -2717,6 +2899,12 @@
         closeMoreOverlay();
         document.getElementById('profileOverlay').classList.remove('hidden');
         loadProfileOverlay(false, player);
+    }
+
+    function openDmWithViewed() {
+        if (!currentPlayer || !viewedProfile || !viewedProfile.id || viewedProfile.id === currentPlayer.id) return;
+        ensureConversationWith(viewedProfile.id, viewedProfile);
+        switchTab('chat');
     }
 
     async function signInWithGoogle() {
