@@ -271,7 +271,7 @@
                     <i data-lucide="shopping-bag" class="w-5 h-5"></i>
                     <span class="hidden md:inline font-bold text-sm">Shop</span>
                 </button>
-                <button onclick="switchTab('chat')" id="tabChat" class="w-full flex items-center gap-3 p-3 rounded-xl transition-all text-slate-400">
+                <button onclick="openChatScreen()" id="tabChat" class="w-full flex items-center gap-3 p-3 rounded-xl transition-all text-slate-400">
                     <i data-lucide="message-circle" class="w-5 h-5"></i>
                     <span class="hidden md:inline font-bold text-sm">Chat</span>
                 </button>
@@ -386,43 +386,6 @@
                     </div>
                 </div>
             </div>
-
-            <div id="chatContainer" class="hidden h-full text-xs">
-                <div class="flex flex-col h-full">
-                    <div class="px-3 py-2 flex items-center justify-between">
-                        <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Chat</h3>
-                        <button onclick="loadChatConversations()" class="text-[10px] text-indigo-500 font-semibold">
-                            Refresh
-                        </button>
-                    </div>
-                    <div class="flex-1 flex border-t border-slate-200 bg-white rounded-2xl mx-2 overflow-hidden">
-                        <div class="w-32 md:w-48 border-r border-slate-200 flex flex-col">
-                            <div class="px-2 py-2 border-b border-slate-200">
-                                <input id="chatNewUsernameInput" type="text" placeholder="username..."
-                                       class="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-[11px] outline-none">
-                                <button onclick="startDmFromUsername()"
-                                        class="mt-1 w-full px-2 py-1.5 rounded-lg bg-slate-900 text-white text-[10px] font-semibold">
-                                    DM
-                                </button>
-                            </div>
-                            <div id="chatConversationList" class="flex-1 overflow-y-auto custom-scroll text-[11px]"></div>
-                        </div>
-                        <div class="flex-1 flex flex-col">
-                            <div id="chatMessages" class="flex-1 overflow-y-auto custom-scroll px-3 py-2 text-[11px] space-y-1 bg-slate-50"></div>
-                            <div class="border-t border-slate-200 p-2 space-y-1 bg-white">
-                                <textarea id="chatInput" rows="2" placeholder="Type a message..."
-                                          class="w-full px-3 py-1.5 rounded-xl border border-slate-200 text-[11px] outline-none"></textarea>
-                                <div class="flex items-center gap-2">
-                                    <button onclick="sendChatMessage()"
-                                            class="ml-auto px-3 py-1.5 rounded-xl bg-indigo-600 text-white text-[11px] font-semibold">
-                                        Send
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
 
         <div id="sidebarControls" class="p-4 border-t bg-slate-50">
@@ -437,11 +400,58 @@
         </div>
     </div>
 
-    <!-- Board -->
-    <div id="board" class="flex-1 relative bg-slate-50 board-grid overflow-hidden">
-        <div id="emptyState" class="absolute inset-0 flex flex-col items-center justify-center opacity-10 pointer-events-none">
-            <i data-lucide="microscope" class="w-32 h-32 mb-4"></i>
-            <h2 class="text-2xl font-black uppercase">Laboratory</h2>
+    <!-- Right side: Lab board or Chat screen -->
+    <div class="flex-1 relative overflow-hidden">
+        <div id="board" class="absolute inset-0 bg-slate-50 board-grid overflow-hidden">
+            <div id="emptyState" class="absolute inset-0 flex flex-col items-center justify-center opacity-10 pointer-events-none">
+                <i data-lucide="microscope" class="w-32 h-32 mb-4"></i>
+                <h2 class="text-2xl font-black uppercase">Laboratory</h2>
+            </div>
+        </div>
+
+        <div id="chatRight" class="absolute inset-0 hidden bg-white text-xs">
+            <div class="flex flex-col h-full">
+                <div class="px-4 py-3 flex items-center justify-between border-b border-slate-200">
+                    <h3 class="text-[11px] font-black text-slate-700 uppercase tracking-[0.2em]">Chat</h3>
+                    <button onclick="closeChatScreen()" class="px-2 py-1 rounded-lg border border-slate-200 text-[10px] text-slate-500 hover:bg-slate-50">
+                        Close
+                    </button>
+                </div>
+                <div class="flex-1 flex min-h-0">
+                    <div class="w-40 md:w-60 border-r border-slate-200 flex flex-col bg-slate-50">
+                        <div class="px-3 py-3 border-b border-slate-200 space-y-1.5">
+                            <input id="chatNewUsernameInput" type="text" placeholder="username..."
+                                   class="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-[11px] outline-none">
+                            <button onclick="startDmFromUsername()"
+                                    class="w-full px-2 py-1.5 rounded-lg bg-slate-900 text-white text-[10px] font-semibold">
+                                New chat
+                            </button>
+                            <button onclick="loadChatConversations()"
+                                    class="w-full px-2 py-1.5 rounded-lg bg-white text-[10px] font-semibold text-slate-600 border border-slate-200 hover:bg-slate-100">
+                                Refresh
+                            </button>
+                        </div>
+                        <div id="chatConversationList" class="flex-1 overflow-y-auto custom-scroll text-[11px]"></div>
+                    </div>
+                    <div class="flex-1 flex flex-col bg-slate-50">
+                        <div id="chatMessages" class="flex-1 overflow-y-auto custom-scroll px-3 py-2 text-[11px] space-y-1"></div>
+                        <div class="border-t border-slate-200 p-2 space-y-1 bg-white">
+                            <textarea id="chatInput" rows="2" placeholder="Type a message..."
+                                      class="w-full px-3 py-1.5 rounded-xl border border-slate-200 text-[11px] outline-none"></textarea>
+                            <div class="flex items-center gap-2">
+                                <input id="chatImageInput" type="file" accept="image/*"
+                                       class="text-[10px] text-slate-400">
+                                <input id="chatAudioInput" type="file" accept="audio/*"
+                                       class="text-[10px] text-slate-400">
+                                <button onclick="sendChatMessage()"
+                                        class="ml-auto px-3 py-1.5 rounded-xl bg-indigo-600 text-white text-[11px] font-semibold">
+                                    Send
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -960,9 +970,8 @@
         "Bobby+Bobby": { name: "Femboy", emoji: "🧔🏻‍♀️", rarity: "diamond", flavor: "aka trans" },
         "Bobby+Femboy": { name: "Donald", emoji: "🫃", rarity: "gold", flavor: "og femboy" },
         "Alien+Virus": { name: "Monster", emoji: "🧌", rarity: "glitch", flavor: "drink" },
-        "Monster+Monster": { name: "Jayden kan", emoji:"🙍‍♂️", rarity: "dumb", flavor: "1%" },
+        "Monster+Monster": { name: "Jayden kan", emoji:"🙍‍♂️", rarity: "normal", flavor: "1%" },
         "Monster+Jayden kan": { name: "oof shark cat", emoji:" 🦈 ", rarity: "diamond", flavor: "the loser of shark" },
-        "Monster+oof shark cat": { name: "Moses", emoji:"🧚", rarity: "dumb", flavor: "hxxbxx" },
     };
 
     const STORAGE_KEYS = {
@@ -986,6 +995,7 @@
     let dragOffset = { x: 0, y: 0 };
     let animationFrameId = null;
     let isOverTrashZone = false;
+    let chatScreenOpen = false;
     let chatConversations = [];
     let activeConvId = null;
     let players = [];
@@ -1724,6 +1734,33 @@
         setTimeout(() => t.classList.remove('active'), 2500);
     }
 
+    function showChatScreen(show) {
+        chatScreenOpen = !!show;
+        const boardEl = document.getElementById('board');
+        const chatEl = document.getElementById('chatRight');
+        const tabChat = document.getElementById('tabChat');
+        if (boardEl && chatEl) {
+            boardEl.classList.toggle('hidden', chatScreenOpen);
+            chatEl.classList.toggle('hidden', !chatScreenOpen);
+        }
+        if (tabChat) {
+            tabChat.classList.toggle('tab-active', chatScreenOpen);
+        }
+    }
+
+    function openChatScreen() {
+        showChatScreen(true);
+        loadChatConversations().catch(() => {});
+    }
+
+    function closeChatScreen() {
+        hideChatScreen();
+    }
+
+    function hideChatScreen() {
+        showChatScreen(false);
+    }
+
     function buyUpgrade(id) {
         const costs = { doubleCoins: 2500, autoMiner: 5000, speedSpawner: 10000 };
         const cost = costs[id];
@@ -1750,13 +1787,16 @@
         document.getElementById('inventoryContainer').classList.toggle('hidden', t !== 'inventory');
         document.getElementById('libraryContainer').classList.toggle('hidden', t !== 'library');
         document.getElementById('shopContainer').classList.toggle('hidden', t !== 'shop');
-        const chat = document.getElementById('chatContainer');
-        if (chat) chat.classList.toggle('hidden', t !== 'chat');
         document.getElementById('tabInv').classList.toggle('tab-active', t === 'inventory');
         document.getElementById('tabLib').classList.toggle('tab-active', t === 'library');
         document.getElementById('tabShop').classList.toggle('tab-active', t === 'shop');
         const tabChat = document.getElementById('tabChat');
-        if (tabChat) tabChat.classList.toggle('tab-active', t === 'chat');
+        if (tabChat) tabChat.classList.toggle('tab-active', chatScreenOpen);
+        if (chatScreenOpen && t !== 'inventory' && t !== 'library' && t !== 'shop') {
+            // no-op
+        } else if (t !== 'chat') {
+            hideChatScreen();
+        }
         if (t === 'library') updateLibrary();
     }
 
@@ -2108,11 +2148,17 @@
         const snap = await get(convRef);
         if (!snap.exists()) {
             const name = targetPlayer?.displayName || targetPlayer?.name || '@user';
+            const otherHandle = targetPlayer?.username
+                ? '@' + targetPlayer.username
+                : (targetPlayer?.handle || '');
+            const otherAvatar = targetPlayer?.pfpUrl || '';
             const meta = {
                 convId,
                 isGroup: false,
                 otherUid: targetUid,
                 name,
+                otherHandle,
+                otherAvatar,
                 lastMessage: '',
                 lastAt: Date.now()
             };
@@ -2143,9 +2189,17 @@
         chatConversations.forEach(c => {
             const btn = document.createElement('button');
             btn.className = 'w-full text-left px-2 py-1.5 rounded-lg hover:bg-slate-100';
-            btn.innerHTML = `<div class="flex flex-col">
-                <span class="text-[11px] font-semibold">${escapeHtml(c.name || 'Chat')}</span>
-                <span class="text-[10px] text-slate-500 truncate">${escapeHtml(c.lastMessage || '')}</span>
+            const name = c.name || 'Chat';
+            const handle = c.otherHandle || '';
+            const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || 'HC';
+            btn.innerHTML = `<div class="flex items-center gap-2">
+                <div class="h-7 w-7 rounded-full bg-slate-800 text-white flex items-center justify-center text-[10px] font-bold">
+                    ${escapeHtml(initials)}
+                </div>
+                <div class="flex flex-col min-w-0">
+                    <span class="text-[11px] font-semibold truncate">${escapeHtml(name)}</span>
+                    <span class="text-[10px] text-slate-500 truncate">${escapeHtml(handle || c.lastMessage || '')}</span>
+                </div>
             </div>`;
             btn.onclick = () => { activeConvId = c.convId; loadChatMessages(c.convId); };
             list.appendChild(btn);
@@ -2168,9 +2222,25 @@
             const row = document.createElement('div');
             row.className = 'flex ' + (mine ? 'justify-end' : 'justify-start');
             const bubble = document.createElement('div');
-            bubble.className = 'max-w-[80%] px-2 py-1.5 rounded-xl text-[11px] ' +
+            bubble.className = 'max-w-[80%] px-2 py-1.5 rounded-xl text-[11px] space-y-1 ' +
                 (mine ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-800');
-            bubble.textContent = m.text || '';
+
+            if (m.type === 'image' && m.dataUrl) {
+                bubble.innerHTML = `<img src="${escapeHtml(m.dataUrl)}" class="max-w-full max-h-48 rounded-lg block">`;
+                if (m.text) {
+                    bubble.innerHTML += `<div>${escapeHtml(m.text)}</div>`;
+                }
+            } else if (m.type === 'audio' && m.dataUrl) {
+                bubble.innerHTML = `<audio controls class="w-full">
+    <source src="${escapeHtml(m.dataUrl)}">
+</audio>`;
+                if (m.text) {
+                    bubble.innerHTML += `<div>${escapeHtml(m.text)}</div>`;
+                }
+            } else {
+                bubble.textContent = m.text || '';
+            }
+
             row.appendChild(bubble);
             msgsEl.appendChild(row);
         });
@@ -2181,29 +2251,56 @@
         if (!currentPlayer || !activeConvId || !window._hcDb || !window._hcDbFns) return;
         const { ref, push, set, update } = window._hcDbFns;
         const input = document.getElementById('chatInput');
+        const imgInput = document.getElementById('chatImageInput');
+        const audioInput = document.getElementById('chatAudioInput');
         const text = (input?.value || '').trim();
-        if (!text) return;
+
+        let type = 'text';
+        let dataUrl = '';
+
+        function fileToDataUrl(file) {
+            return new Promise((resolve, reject) => {
+                const r = new FileReader();
+                r.onload = () => resolve(r.result);
+                r.onerror = reject;
+                r.readAsDataURL(file);
+            });
+        }
+
+        if (imgInput?.files?.[0]) {
+            type = 'image';
+            dataUrl = await fileToDataUrl(imgInput.files[0]);
+        } else if (audioInput?.files?.[0]) {
+            type = 'audio';
+            dataUrl = await fileToDataUrl(audioInput.files[0]);
+        } else if (!text) {
+            return;
+        }
+
         const msgRef = push(ref(window._hcDb, `messages/${activeConvId}`));
         const now = Date.now();
         await set(msgRef, {
             from: currentPlayer.id,
             text,
-            type: 'text',
+            type,
+            dataUrl,
             createdAt: now
         });
         await update(ref(window._hcDb, `userConversations/${currentPlayer.id}/${activeConvId}`), {
-            lastMessage: text,
+            lastMessage: text || (type === 'image' ? '[image]' : type === 'audio' ? '[audio]' : ''),
             lastAt: now
         });
         // also bump receiver's convo meta if present
         const conv = chatConversations.find(c => c.convId === activeConvId);
         if (conv && conv.otherUid) {
             await update(ref(window._hcDb, `userConversations/${conv.otherUid}/${activeConvId}`), {
-                lastMessage: text,
+                lastMessage: text || (type === 'image' ? '[image]' : type === 'audio' ? '[audio]' : ''),
                 lastAt: now
             }).catch(() => {});
         }
         if (input) input.value = '';
+        if (imgInput) imgInput.value = '';
+        if (audioInput) audioInput.value = '';
         await loadChatMessages(activeConvId);
         await loadChatConversations();
     }
@@ -2225,7 +2322,7 @@
         snap.forEach(ch => { if (!target) target = ch.val(); });
         if (!target?.id) { showToast('No such user'); return; }
         await ensureConversationWith(target.id, target);
-        switchTab('chat');
+        openChatScreen();
     }
 
     // ------------------------- Redeem codes -------------------------
@@ -2917,7 +3014,7 @@
     function openDmWithViewed() {
         if (!currentPlayer || !viewedProfile || !viewedProfile.id || viewedProfile.id === currentPlayer.id) return;
         ensureConversationWith(viewedProfile.id, viewedProfile);
-        switchTab('chat');
+        openChatScreen();
     }
 
     async function signInWithGoogle() {
