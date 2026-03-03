@@ -137,64 +137,27 @@
         #toast { position: fixed; bottom: 20px; right: 20px; z-index: 200; transform: translateY(100px); transition: transform 0.3s ease, opacity 0.3s ease; opacity: 0; }
         #toast.active { transform: translateY(0); opacity: 1; }
 
-        /* Intro animation */
-        #introOverlay {
-            position: fixed;
-            inset: 0;
-            background: radial-gradient(circle at top, #1d4ed8, #020617);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 300;
-            overflow: hidden;
-        }
-        .intro-logo {
-            animation: intro-pop 1.4s ease-out forwards;
-        }
-        .intro-sub {
-            animation: intro-fadeup 1.6s ease-out forwards;
-            animation-delay: 0.4s;
-            opacity: 0;
-        }
-        .intro-orbit {
-            position: absolute;
-            border-radius: 999px;
-            border: 1px solid rgba(148, 163, 184, 0.35);
-            animation: intro-orbit 16s linear infinite;
-        }
-        .intro-orbit:nth-child(1) { width: 320px; height: 320px; }
-        .intro-orbit:nth-child(2) { width: 520px; height: 520px; animation-duration: 22s; }
-        .intro-orbit:nth-child(3) { width: 760px; height: 760px; animation-duration: 28s; }
-
-        @keyframes intro-pop {
-            0% { transform: scale(0.4) translateY(40px); opacity: 0; filter: blur(8px); }
-            60% { transform: scale(1.05) translateY(0); opacity: 1; filter: blur(0); }
-            100% { transform: scale(1) translateY(0); opacity: 1; }
-        }
-        @keyframes intro-fadeup {
-            0% { transform: translateY(20px); opacity: 0; }
-            100% { transform: translateY(0); opacity: 1; }
-        }
-        @keyframes intro-orbit {
-            0% { transform: rotate(0deg); opacity: 0.4; }
-            50% { opacity: 0.8; }
-            100% { transform: rotate(360deg); opacity: 0.4; }
+        /* iPad / mobile safe area support */
+        #sidebarControls {
+            padding-bottom: calc(1rem + env(safe-area-inset-bottom));
         }
     </style>
-    <!-- Firebase (Firestore + Auth) -->
+    <!-- Firebase (Realtime Database + Auth) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import {
-            getFirestore,
-            doc,
-            setDoc,
-            getDocs,
-            collection,
+            getDatabase,
+            ref,
+            set,
+            get,
+            child,
             query,
-            where,
-            orderBy,
-            limit
-        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+            orderByChild,
+            equalTo,
+            startAt,
+            endAt,
+            limitToFirst
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
         import {
             getAuth,
             GoogleAuthProvider,
@@ -205,22 +168,23 @@
 
         // Firebase config for Humancraft
         const firebaseConfig = {
-          apiKey: "AIzaSyDnTcadnWIj5ovKNMO3Io2FabxN35S1jZU",
-          authDomain: "humancraft-9ca83.firebaseapp.com",
-          projectId: "humancraft-9ca83",
-          storageBucket: "humancraft-9ca83.firebasestorage.app",
-          messagingSenderId: "582231713357",
-          appId: "1:582231713357:web:1f133e9ca13c48a055de04",
-          measurementId: "G-LC7H7LHW6K"
+          apiKey: "AIzaSyCJ5JfYwYIdAfga-uoDn8CcRPobc0aKnas",
+          authDomain: "humancraft-f45d7.firebaseapp.com",
+          databaseURL: "https://humancraft-f45d7-default-rtdb.asia-southeast1.firebasedatabase.app",
+          projectId: "humancraft-f45d7",
+          storageBucket: "humancraft-f45d7.firebasestorage.app",
+          messagingSenderId: "99184708151",
+          appId: "1:99184708151:web:35d19310c727ed2089cdb2",
+          measurementId: "G-W56C44E0GL"
         };
 
         const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+        const db = getDatabase(app);
         const auth = getAuth(app);
         const provider = new GoogleAuthProvider();
 
         window._hcDb = db;
-        window._hcFirestoreFns = { doc, setDoc, getDocs, collection, query, where, orderBy, limit };
+        window._hcDbFns = { ref, set, get, child, query, orderByChild, equalTo, startAt, endAt, limitToFirst };
         window._hcAuth = auth;
         window._hcAuthProvider = provider;
         window._hcOnAuthStateChanged = onAuthStateChanged;
@@ -230,27 +194,15 @@
 </head>
 <body class="bg-slate-50 transition-colors duration-500" id="bodyRoot">
 
-<div id="introOverlay">
-    <div class="relative text-center text-slate-100">
-        <div class="intro-orbit"></div>
-        <div class="intro-orbit"></div>
-        <div class="intro-orbit"></div>
-        <div class="intro-logo relative z-10">
-            <div class="inline-flex items-center justify-center gap-3 px-6 py-3 rounded-full bg-slate-900/40 border border-slate-500/40 mb-4">
-                <i data-lucide="zap" class="w-5 h-5 text-amber-400"></i>
-                <span class="text-[11px] font-semibold tracking-[0.18em] uppercase text-slate-200">HumanCraft Pro</span>
-            </div>
-            <h1 class="text-4xl md:text-5xl font-black tracking-tight mb-2">Mix. Discover. Evolve.</h1>
-            <p class="intro-sub text-sm md:text-base text-slate-300/80 max-w-sm mx-auto">
-                Drag your chaos into the lab and see what cursed combos you can unlock.
-            </p>
-        </div>
-    </div>
-</div>
-
 <div class="flex h-screen w-full overflow-hidden">
     <!-- Sidebar -->
-    <div class="w-20 md:w-80 bg-white border-r border-slate-200 flex flex-col z-40">
+    <div id="sidebar" class="relative w-20 md:w-80 bg-white border-r border-slate-200 flex flex-col z-40">
+        <!-- Drag-to-delete indicator (appears when dragging over sidebar) -->
+        <div id="trashDropIndicator" class="hidden pointer-events-none absolute inset-0 items-center justify-center">
+            <div class="h-14 w-14 rounded-2xl bg-rose-500/90 text-white flex items-center justify-center shadow-2xl ring-4 ring-rose-300/30">
+                <i data-lucide="trash-2" class="w-7 h-7"></i>
+            </div>
+        </div>
         <div class="p-4 md:p-6 border-b">
             <h1 class="text-xl md:text-2xl font-black text-indigo-600 flex items-center gap-2">
                 <i data-lucide="zap" class="fill-indigo-600 w-6 h-6"></i> 
@@ -409,13 +361,10 @@
             </div>
         </div>
 
-        <div class="p-4 border-t bg-slate-50">
-            <div class="grid grid-cols-3 gap-2">
+        <div id="sidebarControls" class="p-4 border-t bg-slate-50">
+            <div class="grid grid-cols-2 gap-2">
                 <button onclick="clearBoard()" class="p-2 bg-white border rounded-xl hover:bg-rose-50 hover:text-rose-600 transition-colors">
                     <i data-lucide="trash-2" class="w-4 h-4 mx-auto"></i>
-                </button>
-                <button onclick="restartData()" class="p-2 bg-white border rounded-xl hover:bg-orange-50 hover:text-orange-600 transition-colors">
-                    <i data-lucide="refresh-cw" class="w-4 h-4 mx-auto"></i>
                 </button>
                 <button onclick="toggleTheme()" class="p-2 bg-white border rounded-xl hover:bg-indigo-50 transition-colors">
                     <i data-lucide="moon" class="w-4 h-4 mx-auto"></i>
@@ -684,6 +633,24 @@
                 />
                 <div id="moreSearchResults" class="space-y-1 max-h-40 overflow-y-auto custom-scroll text-[11px]"></div>
             </div>
+
+            <div class="bg-[#2b2d31] rounded-2xl p-3 border border-[#3f4247] space-y-2">
+                <p class="uppercase text-[10px] text-slate-400 font-semibold">Account & Data</p>
+                <button
+                    onclick="restartData()"
+                    class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-[#313338] hover:bg-[#3f4147] text-[11px] font-semibold"
+                >
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                    Restart data
+                </button>
+                <button
+                    onclick="logout()"
+                    class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-rose-600/90 hover:bg-rose-600 text-[11px] font-semibold"
+                >
+                    <i data-lucide="log-out" class="w-4 h-4"></i>
+                    Log out
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -694,6 +661,7 @@
         { name: "Melon", emoji: "🍉", rarity: "normal" },
         { name: "Coco", emoji: "🥥", rarity: "normal" },
         { name: "Anson", emoji: "👦", rarity: "67" },
+        { name: "Bobby", emoji: "🏳️‍🌈", rarity: "diamond" },
     ];
 
     const RARITIES = {
@@ -716,14 +684,18 @@
         "Chester+Coco": { name: "Cornball", emoji: "🌽", rarity: "food", flavor: "Classic cornball energy." },
         "Cornball+Max": { name: "Cashoh", emoji: "👤", rarity: "gold", flavor: "The weight of the world." },
         "Chester+Chester": { name: "Leo", emoji: "👨🏿‍🦰", rarity: "void", flavor: "The lost brother." },
-        "Chester+Leo": { name: "Nigger Twins", emoji: "👨🏿‍❤️‍💋‍👨🏿", rarity: "brown", flavor: "Double trouble." },
-        "Max+Nigger Twins": { name: "Nigger Max", emoji: "👳🏿‍♂️🍔", rarity: "diamond", flavor: "The final evolution." },
+        "Chester+Leo": { name: "Chester Twins", emoji: "👨🏿‍❤️‍💋‍👨🏿", rarity: "brown", flavor: "Double trouble." },
+        "Chester Twins+Max": { name: "Max Twins", emoji: "👳🏿‍♂️🍔", rarity: "diamond", flavor: "The final evolution." },
         "Max+Max": { name: "Fat Max", emoji: "🍔🍔", rarity: "food", flavor: "Supersized hunger." },
         "Fat Max+Fat Max": { name: "Hamburger", emoji: "🍔🍔🍔", rarity: "dumb", flavor: "Absolute peak dumbness." },
         "Anson+Chester": { name: "Psychotic", emoji: "💔", rarity: "fire", flavor: "Crazy Man " },
         "Anson+Melon": { name: "Virus", emoji: "👾", rarity: "glitch", flavor: "404" },
-        "Coco+Cornball": { name: "Alien", emoji: "👽", rarity: "cosmic", flavor: "burn the corn farm" }
-        "Virus+Fat Max": { name: "Fat virus", emoji: "🦠", rarity: "cosmic", flavor: "Dont get INFECTED" }
+        "Coco+Cornball": { name: "Alien", emoji: "👽", rarity: "cosmic", flavor: "burn the corn farm" },
+        "Fat Max+Virus": { name: "Fat Virus", emoji: "🦠", rarity: "cosmic", flavor: "Too fat " },
+        "Coco+Coco": { name: "Melon", emoji: "🍉", rarity: "normal", flavor: "Mix Melon with coco can get Max" },
+        "Bobby+Bobby": { name: "Femboy", emoji: "🧔🏻‍♀️", rarity: "diamond", flavor: "aka trans" },
+        "Bobby+Femboy": { name: "Donald", emoji: "🫃", rarity: "gold", flavor: "og femboy" },
+        "Alien+Virus": { name: "Monster", emoji: "🧌", rarity: "glitch", flavor: "drink" },
     };
 
     const STORAGE_KEYS = {
@@ -746,15 +718,37 @@
     let draggedId = null;
     let dragOffset = { x: 0, y: 0 };
     let animationFrameId = null;
+    let isOverTrashZone = false;
     let players = [];
     let currentPlayer = null;
     let viewedProfile = null;
     let playtimeIntervalId = null;
     let authMode = 'signup';
 
+    function setTrashIndicator(active) {
+        const el = document.getElementById('trashDropIndicator');
+        if (!el) return;
+        el.classList.toggle('hidden', !active);
+        el.style.display = active ? 'flex' : '';
+        if (active) lucide.createIcons();
+    }
+
     function init() {
         lucide.createIcons();
         applyTheme(state.theme);
+
+        // Ensure new starter elements appear for existing saves
+        INITIAL_ELEMENTS.forEach(el => {
+            if (!state.inventory.some(i => i.name === el.name)) state.inventory.push(el);
+        });
+
+        // Sanitize legacy saved names (based on emoji/rarity)
+        state.inventory = state.inventory.map(i => {
+            if (i && i.emoji === "👨🏿‍❤️‍💋‍👨🏿" && i.rarity === "brown") return { ...i, name: "Chester Twins" };
+            if (i && i.emoji === "👳🏿‍♂️🍔" && i.rarity === "diamond") return { ...i, name: "Max Twins" };
+            return i;
+        });
+
         renderInventory();
         updateUI();
 
@@ -767,26 +761,13 @@
         ensurePlayer();
         setAuthMode('signup');
         startPlaytimeTracking();
-
-        // Fade out intro after a short delay
-        const intro = document.getElementById('introOverlay');
-        if (intro) {
-            intro.style.opacity = '1';
-            intro.style.transition = 'opacity 0.7s ease, transform 0.7s ease';
-            setTimeout(() => {
-                intro.style.opacity = '0';
-                intro.style.transform = 'scale(1.02)';
-                setTimeout(() => intro.remove(), 750);
-            }, 1200);
-        }
         
-        const b = document.getElementById('board');
         if (window.PointerEvent) {
-            b.addEventListener('pointermove', handleMove, { passive: false });
+            window.addEventListener('pointermove', handleMove, { passive: false });
             window.addEventListener('pointerup', handleEnd);
         } else {
-            b.addEventListener('mousemove', handleMove);
-            b.addEventListener('touchmove', handleMove, { passive: false });
+            window.addEventListener('mousemove', handleMove);
+            window.addEventListener('touchmove', handleMove, { passive: false });
             window.addEventListener('mouseup', handleEnd);
             window.addEventListener('touchend', handleEnd);
         }
@@ -902,13 +883,13 @@
     }
 
     async function sendProfileToBackend() {
-        if (!currentPlayer || !window._hcDb || !window._hcFirestoreFns) return;
-        const { doc, setDoc } = window._hcFirestoreFns;
+        if (!currentPlayer || !window._hcDb || !window._hcDbFns) return;
+        const { ref, set } = window._hcDbFns;
         const db = window._hcDb;
         const displayName = currentPlayer.displayName || currentPlayer.name || '';
         const username = currentPlayer.username || (currentPlayer.handle ? currentPlayer.handle.replace('@', '') : '');
-        const ref = doc(db, "players", currentPlayer.id);
-        await setDoc(ref, {
+        const playerRef = ref(db, "players/" + currentPlayer.id);
+        await set(playerRef, {
             id: currentPlayer.id,
             name: currentPlayer.name,
             handle: currentPlayer.handle,
@@ -919,10 +900,12 @@
             bio: currentPlayer.bio || '',
             themeColor: currentPlayer.themeColor || '#5865F2',
             pfpUrl: currentPlayer.pfpUrl || '',
+            bannerUrl: currentPlayer.bannerUrl || '',
             coins: currentPlayer.coins,
             playTimeMs: currentPlayer.playTimeMs,
+            password: currentPlayer.password || '',
             updatedAt: Date.now()
-        }, { merge: true });
+        });
     }
 
     function getCustomHTML(item) {
@@ -974,11 +957,16 @@
 
     function startDrag(id, e) {
         draggedId = id;
+        isOverTrashZone = false;
+        setTrashIndicator(false);
         const it = boardItems.find(i => i.id === id);
         const cx = e.touches ? e.touches[0].clientX : e.clientX;
         const cy = e.touches ? e.touches[0].clientY : e.clientY;
         dragOffset = { x: cx - it.x, y: cy - it.y };
         const el = document.getElementById(`item-${id}`);
+        if (el && e && typeof e.pointerId === 'number' && el.setPointerCapture) {
+            try { el.setPointerCapture(e.pointerId); } catch (_) {}
+        }
         el.style.zIndex = "100";
         el.classList.add('dragging');
     }
@@ -999,6 +987,16 @@
             it.y = cy - dragOffset.y;
             const el = document.getElementById(`item-${draggedId}`);
             if (el) el.style.transform = `translate3d(${it.x}px, ${it.y}px, 0)`;
+
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar) {
+                const r = sidebar.getBoundingClientRect();
+                const over = cx >= r.left && cx <= r.right && cy >= r.top && cy <= r.bottom;
+                if (over !== isOverTrashZone) {
+                    isOverTrashZone = over;
+                    setTrashIndicator(over);
+                }
+            }
         });
     }
 
@@ -1006,8 +1004,23 @@
         if (!draggedId) return;
         const el = document.getElementById(`item-${draggedId}`);
         if (el) el.classList.remove('dragging');
+        setTrashIndicator(false);
 
         const it = boardItems.find(i => i.id === draggedId);
+        if (!it) {
+            draggedId = null;
+            isOverTrashZone = false;
+            return;
+        }
+        if (isOverTrashZone) {
+            boardItems = boardItems.filter(i => i.id !== draggedId);
+            if (el) el.remove();
+            if (!boardItems.length) document.getElementById('emptyState').classList.remove('hidden');
+            showToast("Deleted");
+            draggedId = null;
+            isOverTrashZone = false;
+            return;
+        }
         const target = boardItems.find(o => o.id !== draggedId && Math.hypot(it.x-o.x, it.y-o.y) < 100);
         
         if (target) {
@@ -1033,6 +1046,7 @@
             }
         }
         draggedId = null;
+        isOverTrashZone = false;
     }
 
     function renderInventory() {
@@ -1094,6 +1108,22 @@
             Object.values(STORAGE_KEYS).forEach(key => localStorage.removeItem(key));
             location.reload();
         }
+    }
+
+    async function logout() {
+        try {
+            if (window._hcAuth && window._hcSignOut && window._hcAuth.currentUser) {
+                await window._hcSignOut(window._hcAuth);
+            }
+        } catch (e) {
+            console.warn(e);
+        }
+        localStorage.removeItem(STORAGE_KEYS.currentPlayerId);
+        currentPlayer = null;
+        viewedProfile = null;
+        closeMoreOverlay();
+        document.getElementById('playerOverlay').classList.remove('hidden');
+        showToast('Logged out');
     }
 
     function showToast(msg) {
@@ -1390,23 +1420,24 @@
         if (!input || !container) return;
         const term = (input.value || '').trim().toLowerCase().replace(/^@/, '');
         container.innerHTML = '';
-        if (!term || !window._hcDb || !window._hcFirestoreFns) return;
+        if (!term || !window._hcDb || !window._hcDbFns) return;
 
-        const { getDocs, collection, query, where, limit } = window._hcFirestoreFns;
+        const { ref, query, orderByChild, equalTo, get, limitToFirst } = window._hcDbFns;
         const db = window._hcDb;
         try {
-            const q = query(
-                collection(db, "players"),
-                where("usernameLower", "==", term),
-                limit(5)
+            const qRef = query(
+                ref(db, "players"),
+                orderByChild("usernameLower"),
+                equalTo(term),
+                limitToFirst(5)
             );
-            const snap = await getDocs(q);
-            if (snap.empty) {
+            const snap = await get(qRef);
+            if (!snap.exists()) {
                 container.innerHTML = '<p class="text-[11px] text-slate-400 py-1">No user with that username.</p>';
                 return;
             }
-            snap.forEach(docSnap => {
-                const p = docSnap.data();
+            snap.forEach(childSnap => {
+                const p = childSnap.val();
                 const mins = Math.floor((p.playTimeMs || 0) / 60000);
                 const row = document.createElement('div');
                 row.className = 'flex items-center justify-between px-2 py-1 rounded-lg bg-[#1e1f22]';
@@ -1438,8 +1469,8 @@
     }
 
     async function searchPlayersCombined(fromMoreOverlay = false) {
-        if (!window._hcDb || !window._hcFirestoreFns) return;
-        const { getDocs, collection, query, where, orderBy, limit } = window._hcFirestoreFns;
+        if (!window._hcDb || !window._hcDbFns) return;
+        const { ref, query, orderByChild, startAt, endAt, get, limitToFirst } = window._hcDbFns;
         const db = window._hcDb;
         const termInputId = fromMoreOverlay ? 'moreSearchInput' : 'profileSearchInput';
         const containerId = fromMoreOverlay ? 'moreSearchResults' : 'profileSearchResults';
@@ -1450,33 +1481,42 @@
         if (!term) return;
         try {
             const qDisplay = query(
-                collection(db, "players"),
-                where("displayNameLower", ">=", term),
-                where("displayNameLower", "<=", term + "\uf8ff"),
-                orderBy("displayNameLower"),
-                limit(15)
+                ref(db, "players"),
+                orderByChild("displayNameLower"),
+                startAt(term),
+                endAt(term + "\uf8ff"),
+                limitToFirst(15)
             );
             const qUser = query(
-                collection(db, "players"),
-                where("usernameLower", ">=", term),
-                where("usernameLower", "<=", term + "\uf8ff"),
-                orderBy("usernameLower"),
-                limit(15)
+                ref(db, "players"),
+                orderByChild("usernameLower"),
+                startAt(term),
+                endAt(term + "\uf8ff"),
+                limitToFirst(15)
             );
-            const [snapDisplay, snapUser] = await Promise.all([getDocs(qDisplay), getDocs(qUser)]);
+            const [snapDisplay, snapUser] = await Promise.all([get(qDisplay), get(qUser)]);
             const seen = new Set();
             const results = [];
-            snapDisplay.forEach(docSnap => {
-                const data = docSnap.data();
-                const id = docSnap.id;
-                if (!seen.has(id)) {
-                    seen.add(id);
-                    results.push({ id, ...data });
-                }
-            });
-            snapUser.forEach(docSnap => {
-                const data = docSnap.data();
-                const id = docSnap.id;
+            if (snapDisplay.exists()) {
+                snapDisplay.forEach(childSnap => {
+                    const data = childSnap.val();
+                    const id = data.id || childSnap.key;
+                    if (!seen.has(id)) {
+                        seen.add(id);
+                        results.push({ id, ...data });
+                    }
+                });
+            }
+            if (snapUser.exists()) {
+                snapUser.forEach(childSnap => {
+                    const data = childSnap.val();
+                    const id = data.id || childSnap.key;
+                    if (!seen.has(id)) {
+                        seen.add(id);
+                        results.push({ id, ...data });
+                    }
+                });
+            }
                 if (!seen.has(id)) {
                     seen.add(id);
                     results.push({ id, ...data });
@@ -1528,17 +1568,17 @@
     }
 
     async function signInWithGoogle() {
-        if (!window._hcAuth || !window._hcSignInWithPopup || !window._hcAuthProvider || !window._hcDb || !window._hcFirestoreFns) return;
-        const { doc, getDoc, setDoc } = window._hcFirestoreFns;
+        if (!window._hcAuth || !window._hcSignInWithPopup || !window._hcAuthProvider || !window._hcDb || !window._hcDbFns) return;
+        const { ref, get, set } = window._hcDbFns;
         const db = window._hcDb;
         try {
             const result = await window._hcSignInWithPopup(window._hcAuth, window._hcAuthProvider);
             const user = result.user;
             const uid = user.uid;
-            const ref = doc(db, "players", uid);
-            const snap = await getDoc(ref);
+            const playerRef = ref(db, "players/" + uid);
+            const snap = await get(playerRef);
             if (snap.exists()) {
-                const data = snap.data();
+                const data = snap.val();
                 currentPlayer = { ...data, id: data.id || uid };
                 state.coins = currentPlayer.coins || 0;
                 save();
@@ -1564,8 +1604,8 @@
     }
 
     async function submitSignup() {
-        if (!window._hcDb || !window._hcFirestoreFns) return;
-        const { doc, setDoc, getDocs, collection, query, where, limit } = window._hcFirestoreFns;
+        if (!window._hcDb || !window._hcDbFns) return;
+        const { ref, set, get, query, orderByChild, equalTo, limitToFirst } = window._hcDbFns;
         const db = window._hcDb;
         const displayNameInput = document.getElementById('signupDisplayNameInput');
         const usernameInput = document.getElementById('signupUsernameInput');
@@ -1589,13 +1629,14 @@
         }
         try {
             const lower = username.toLowerCase();
-            const q = query(
-                collection(db, "players"),
-                where("usernameLower", "==", lower),
-                limit(1)
+            const qRef = query(
+                ref(db, "players"),
+                orderByChild("usernameLower"),
+                equalTo(lower),
+                limitToFirst(1)
             );
-            const snap = await getDocs(q);
-            if (!snap.empty) {
+            const snap = await get(qRef);
+            if (snap.exists()) {
                 errEl.textContent = 'That username is already taken. Choose another.';
                 return;
             }
@@ -1617,8 +1658,8 @@
             players.push(currentPlayer);
             savePlayers();
             localStorage.setItem(STORAGE_KEYS.currentPlayerId, id);
-            const ref = doc(db, "players", id);
-            await setDoc(ref, {
+            const playerRef = ref(db, "players/" + id);
+            await set(playerRef, {
                 id,
                 name: displayName,
                 handle,
@@ -1629,11 +1670,12 @@
                 bio: '',
                 themeColor: '#5865F2',
                 pfpUrl: '',
+                bannerUrl: '',
                 coins: currentPlayer.coins,
                 playTimeMs: currentPlayer.playTimeMs,
                 password: password,
                 updatedAt: Date.now()
-            }, { merge: true });
+            });
             document.getElementById('playerOverlay').classList.add('hidden');
             renderProfile();
             renderLeaderboard();
@@ -1645,8 +1687,8 @@
     }
 
     async function submitLogin() {
-        if (!window._hcDb || !window._hcFirestoreFns) return;
-        const { getDocs, collection, query, where, limit } = window._hcFirestoreFns;
+        if (!window._hcDb || !window._hcDbFns) return;
+        const { ref, get, query, orderByChild, equalTo, limitToFirst } = window._hcDbFns;
         const db = window._hcDb;
         const usernameInput = document.getElementById('loginUsernameInput');
         const passwordInput = document.getElementById('loginPasswordInput');
@@ -1660,17 +1702,25 @@
         }
         try {
             const lower = username.toLowerCase();
-            const q = query(
-                collection(db, "players"),
-                where("usernameLower", "==", lower),
-                limit(1)
+            const qRef = query(
+                ref(db, "players"),
+                orderByChild("usernameLower"),
+                equalTo(lower),
+                limitToFirst(1)
             );
-            const snap = await getDocs(q);
-            if (snap.empty) {
+            const snap = await get(qRef);
+            if (!snap.exists()) {
                 errEl.textContent = 'No account with that username.';
                 return;
             }
-            const data = snap.docs[0].data();
+            let data = null;
+            snap.forEach(childSnap => {
+                if (!data) data = childSnap.val();
+            });
+            if (!data) {
+                errEl.textContent = 'No account with that username.';
+                return;
+            }
             if (data.password !== password) {
                 errEl.textContent = 'Incorrect password.';
                 return;
