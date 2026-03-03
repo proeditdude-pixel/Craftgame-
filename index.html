@@ -150,13 +150,20 @@
             ref,
             set,
             get,
+            update,
+            remove,
             child,
             query,
             orderByChild,
             equalTo,
             startAt,
             endAt,
-            limitToFirst
+            limitToFirst,
+            limitToLast,
+            push,
+            onValue,
+            off,
+            runTransaction
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
         import {
             getAuth,
@@ -184,7 +191,7 @@
         const provider = new GoogleAuthProvider();
 
         window._hcDb = db;
-        window._hcDbFns = { ref, set, get, child, query, orderByChild, equalTo, startAt, endAt, limitToFirst };
+        window._hcDbFns = { ref, set, get, update, remove, child, query, orderByChild, equalTo, startAt, endAt, limitToFirst, limitToLast, push, onValue, off, runTransaction };
         window._hcAuth = auth;
         window._hcAuthProvider = provider;
         window._hcOnAuthStateChanged = onAuthStateChanged;
@@ -193,6 +200,22 @@
     </script>
 </head>
 <body class="bg-slate-50 transition-colors duration-500" id="bodyRoot">
+
+<!-- Global announcement bar -->
+<div id="announcementBar" class="fixed top-3 left-1/2 -translate-x-1/2 z-[95] hidden w-[min(640px,calc(100%-24px))]">
+    <div class="bg-slate-900 text-white rounded-2xl shadow-2xl border border-white/10 px-4 py-3 flex items-start justify-between gap-3">
+        <div class="flex items-start gap-2">
+            <i data-lucide="megaphone" class="w-4 h-4 text-amber-400 mt-0.5"></i>
+            <div>
+                <p class="text-[10px] uppercase tracking-[0.18em] text-slate-400 font-semibold">Announcement</p>
+                <p id="announcementText" class="text-[12px] leading-snug text-slate-100"></p>
+            </div>
+        </div>
+        <button onclick="dismissAnnouncement()" class="p-1.5 rounded-full bg-white/10 hover:bg-white/20">
+            <i data-lucide="x" class="w-4 h-4 text-slate-200"></i>
+        </button>
+    </div>
+</div>
 
 <div class="flex h-screen w-full overflow-hidden">
     <!-- Sidebar -->
@@ -541,6 +564,7 @@
                     </div>
                     <div>
                         <p id="profileCardDisplayName" class="text-lg font-semibold">Display Name</p>
+                        <div id="profileCardBadges" class="flex flex-wrap gap-1.5 mt-1"></div>
                         <p id="profileCardUsername" class="text-xs text-slate-400">@username</p>
                     </div>
                 </div>
@@ -636,6 +660,23 @@
 
             <div class="bg-[#2b2d31] rounded-2xl p-3 border border-[#3f4247] space-y-2">
                 <p class="uppercase text-[10px] text-slate-400 font-semibold">Account & Data</p>
+                <div class="grid grid-cols-2 gap-2">
+                    <button
+                        onclick="openAdminOverlay()"
+                        id="btnOpenAdminPanel"
+                        class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-indigo-600/90 hover:bg-indigo-600 text-[11px] font-semibold hidden"
+                    >
+                        <i data-lucide="shield" class="w-4 h-4"></i>
+                        Admin
+                    </button>
+                    <button
+                        onclick="openRedeemOverlay()"
+                        class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-[#313338] hover:bg-[#3f4147] text-[11px] font-semibold"
+                    >
+                        <i data-lucide="ticket" class="w-4 h-4"></i>
+                        Redeem
+                    </button>
+                </div>
                 <button
                     onclick="restartData()"
                     class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-[#313338] hover:bg-[#3f4147] text-[11px] font-semibold"
@@ -650,6 +691,181 @@
                     <i data-lucide="log-out" class="w-4 h-4"></i>
                     Log out
                 </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Redeem overlay -->
+<div id="redeemOverlay" class="fixed inset-0 bg-slate-900/80 backdrop-blur-xl z-[116] flex items-center justify-center hidden">
+    <div class="bg-[#1e1f22] text-white rounded-3xl w-full max-w-md mx-4 shadow-2xl overflow-hidden">
+        <div class="h-16 bg-gradient-to-r from-amber-500 via-indigo-500 to-emerald-500 flex items-center justify-between px-6">
+            <div>
+                <p class="text-[10px] uppercase tracking-[0.2em] text-amber-100/80 font-semibold">Rewards</p>
+                <p class="text-sm font-semibold">Redeem a Code</p>
+            </div>
+            <button onclick="closeRedeemOverlay()" class="p-1.5 rounded-full bg-black/30 hover:bg-black/50">
+                <i data-lucide="x" class="w-4 h-4 text-slate-100"></i>
+            </button>
+        </div>
+        <div class="px-6 py-5 space-y-3 text-xs">
+            <div class="bg-[#2b2d31] rounded-2xl p-3 border border-[#3f4247] space-y-2">
+                <p class="uppercase text-[10px] text-slate-400 font-semibold">Enter Code</p>
+                <input id="redeemCodeInput" type="text" placeholder="ex: WELCOME100" class="w-full px-3 py-2 rounded-xl bg-[#1e1f22] border border-[#3f4247] text-[12px] outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                <p id="redeemError" class="text-[10px] text-rose-400 min-h-[14px]"></p>
+                <button onclick="redeemCodeFromUi()" class="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[11px] font-semibold text-slate-900">
+                    Redeem
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Admin overlay -->
+<div id="adminOverlay" class="fixed inset-0 bg-slate-900/80 backdrop-blur-xl z-[117] flex items-center justify-center hidden">
+    <div class="bg-[#0b1220] text-white rounded-3xl w-full max-w-3xl mx-4 shadow-2xl overflow-hidden border border-white/10">
+        <div class="h-16 bg-gradient-to-r from-indigo-600 via-fuchsia-600 to-amber-500 flex items-center justify-between px-6">
+            <div>
+                <p class="text-[10px] uppercase tracking-[0.2em] text-white/70 font-semibold">Admin Panel</p>
+                <p class="text-sm font-semibold">Moderation & Rewards</p>
+            </div>
+            <button onclick="closeAdminOverlay()" class="p-1.5 rounded-full bg-black/30 hover:bg-black/50">
+                <i data-lucide="x" class="w-4 h-4 text-slate-100"></i>
+            </button>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-0">
+            <div class="md:col-span-1 border-r border-white/10 bg-[#0b1220]">
+                <div class="p-4 space-y-3">
+                    <div class="bg-white/5 rounded-2xl p-3 border border-white/10 space-y-2">
+                        <p class="uppercase text-[10px] text-white/60 font-semibold">Find User</p>
+                        <input id="adminUserSearchInput" type="text" placeholder="username or uid" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <button onclick="adminSearchUsers()" class="w-full py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-[11px] font-semibold">Search</button>
+                        <div id="adminUserResults" class="space-y-1 max-h-48 overflow-y-auto custom-scroll text-[11px]"></div>
+                    </div>
+
+                    <div class="bg-white/5 rounded-2xl p-3 border border-white/10 space-y-2">
+                        <p class="uppercase text-[10px] text-white/60 font-semibold">Global Announcement</p>
+                        <textarea id="adminAnnouncementInput" rows="3" placeholder="Write announcement..." class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                        <div class="flex gap-2">
+                            <button onclick="adminSetAnnouncement()" class="flex-1 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-[11px] font-semibold text-slate-900">Set</button>
+                            <button onclick="adminClearAnnouncement()" class="flex-1 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-[11px] font-semibold">Clear</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white/5 rounded-2xl p-3 border border-white/10 space-y-2">
+                        <p class="uppercase text-[10px] text-white/60 font-semibold">Create Redeem Code</p>
+                        <input id="adminCodeNameInput" type="text" placeholder="CODE123" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <div class="grid grid-cols-2 gap-2">
+                            <input id="adminCodeCoinsInput" type="number" placeholder="coins" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none">
+                            <input id="adminCodeMaxUsesInput" type="number" placeholder="max uses" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none">
+                        </div>
+                        <input id="adminCodeElementsInput" type="text" placeholder="elements (comma) e.g. Max, Leo" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none">
+                        <div class="grid grid-cols-2 gap-2">
+                            <label class="flex items-center gap-2 text-[11px] text-white/70"><input id="adminCodeUpDouble" type="checkbox"> doubleCoins</label>
+                            <label class="flex items-center gap-2 text-[11px] text-white/70"><input id="adminCodeUpAuto" type="checkbox"> autoMiner</label>
+                            <label class="flex items-center gap-2 text-[11px] text-white/70"><input id="adminCodeUpSpeed" type="checkbox"> speedSpawner</label>
+                            <input id="adminCodeExpiresHoursInput" type="number" placeholder="expires (hours)" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none">
+                        </div>
+                        <p id="adminCodeError" class="text-[10px] text-rose-300 min-h-[14px]"></p>
+                        <button onclick="adminCreateCode()" class="w-full py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[11px] font-semibold text-slate-900">Create Code</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="md:col-span-2 bg-[#07101f]">
+                <div class="p-4 space-y-3">
+                    <div class="bg-white/5 rounded-2xl p-3 border border-white/10">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p class="text-[10px] uppercase tracking-[0.2em] text-white/60 font-semibold">Selected User</p>
+                                <p id="adminSelectedUserLabel" class="text-[13px] font-semibold text-white/90">None</p>
+                                <p id="adminSelectedUserMeta" class="text-[11px] text-white/60"></p>
+                            </div>
+                            <button onclick="adminRefreshSelected()" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-[11px] font-semibold">Refresh</button>
+                        </div>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-3">
+                        <div class="bg-white/5 rounded-2xl p-3 border border-white/10 space-y-2">
+                            <p class="uppercase text-[10px] text-white/60 font-semibold">Coins & Elements</p>
+                            <div class="grid grid-cols-2 gap-2">
+                                <input id="adminGiveCoinsInput" type="number" placeholder="+ coins" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none">
+                                <button onclick="adminGiveCoins()" class="w-full py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-[11px] font-semibold text-slate-900">Give</button>
+                            </div>
+                            <input id="adminGrantElementInput" type="text" placeholder="Element name (ex: Max Twins)" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none">
+                            <div class="grid grid-cols-2 gap-2">
+                                <input id="adminGrantExpiresHoursInput" type="number" placeholder="expires (hours, blank=perm)" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none">
+                                <button onclick="adminGrantElement()" class="w-full py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[11px] font-semibold text-slate-900">Grant</button>
+                            </div>
+                        </div>
+
+                        <div class="bg-white/5 rounded-2xl p-3 border border-white/10 space-y-2">
+                            <p class="uppercase text-[10px] text-white/60 font-semibold">Role / Warn / Ban</p>
+                            <div class="grid grid-cols-2 gap-2">
+                                <select id="adminRoleSelect" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none">
+                                    <option value="normal">normal</option>
+                                    <option value="mod">mod</option>
+                                    <option value="admin">admin</option>
+                                </select>
+                                <button onclick="adminSetRole()" class="w-full py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-[11px] font-semibold">Set Role</button>
+                            </div>
+                            <textarea id="adminWarnMsgInput" rows="2" placeholder="Warn message..." class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none"></textarea>
+                            <button onclick="adminWarn()" class="w-full py-2 rounded-xl bg-white/10 hover:bg-white/20 text-[11px] font-semibold">Send Warning</button>
+                            <div class="grid grid-cols-2 gap-2">
+                                <input id="adminBanHoursInput" type="number" placeholder="ban hours (0=perm)" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none">
+                                <input id="adminBanReasonInput" type="text" placeholder="ban reason" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none">
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button onclick="adminBan()" class="w-full py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-[11px] font-semibold">Ban</button>
+                                <button onclick="adminUnban()" class="w-full py-2 rounded-xl bg-white/10 hover:bg-white/20 text-[11px] font-semibold">Unban</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white/5 rounded-2xl p-3 border border-white/10 space-y-2">
+                        <p class="uppercase text-[10px] text-white/60 font-semibold">Edit Profile</p>
+                        <div class="grid md:grid-cols-2 gap-2">
+                            <input id="adminEditDisplayName" type="text" placeholder="display name" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none">
+                            <input id="adminEditUsername" type="text" placeholder="username (no @)" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none">
+                        </div>
+                        <textarea id="adminEditBio" rows="2" placeholder="bio" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none"></textarea>
+                        <div class="grid md:grid-cols-2 gap-2">
+                            <input id="adminEditThemeColor" type="text" placeholder="#5865F2" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none">
+                            <input id="adminEditPfpUrl" type="text" placeholder="pfp URL (optional)" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none">
+                        </div>
+                        <input id="adminEditBannerUrl" type="text" placeholder="banner URL (optional)" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none">
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="adminApplyProfileEdits()" class="w-full py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-[11px] font-semibold">Apply</button>
+                            <button onclick="adminPrefillProfileEdits()" class="w-full py-2 rounded-xl bg-white/10 hover:bg-white/20 text-[11px] font-semibold">Prefill</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white/5 rounded-2xl p-3 border border-white/10 space-y-2">
+                        <p class="uppercase text-[10px] text-white/60 font-semibold">Badges</p>
+                        <div class="grid md:grid-cols-3 gap-2">
+                            <input id="adminBadgeLabelInput" type="text" placeholder="badge text" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none">
+                            <input id="adminBadgeIconUrlInput" type="text" placeholder="icon URL (optional)" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none">
+                            <input id="adminBadgeIconFileInput" type="file" accept="image/*" class="w-full text-[10px] text-white/70 file:bg-white/10 file:border-0 file:px-2 file:py-1 file:text-[10px] file:text-white">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="adminAddBadge()" class="w-full py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[11px] font-semibold text-slate-900">Add Badge</button>
+                            <button onclick="adminClearBadges()" class="w-full py-2 rounded-xl bg-white/10 hover:bg-white/20 text-[11px] font-semibold">Clear Badges</button>
+                        </div>
+                        <div id="adminBadgePreview" class="flex flex-wrap gap-2 pt-1"></div>
+                    </div>
+
+                    <div class="bg-white/5 rounded-2xl p-3 border border-white/10 space-y-2">
+                        <p class="uppercase text-[10px] text-white/60 font-semibold">User Save (Lab)</p>
+                        <div class="grid grid-cols-2 gap-2 text-[11px] text-white/70">
+                            <div>Inventory: <span id="adminSaveInvCount">-</span></div>
+                            <div>Upgrades: <span id="adminSaveUpgrades">-</span></div>
+                        </div>
+                        <textarea id="adminSaveJson" rows="8" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[11px] outline-none font-mono"></textarea>
+                    </div>
+
+                    <p id="adminError" class="text-[11px] text-rose-300 min-h-[16px]"></p>
+                </div>
             </div>
         </div>
     </div>
@@ -720,6 +936,7 @@
     let animationFrameId = null;
     let isOverTrashZone = false;
     let players = [];
+    let globalPlayers = [];
     let currentPlayer = null;
     let viewedProfile = null;
     let playtimeIntervalId = null;
@@ -812,6 +1029,228 @@
         }
     }
 
+    // ------------------------- Backend sync + moderation -------------------------
+
+    let announcementUnsub = null;
+    let moderationUnsub = null;
+    let bannedUnsub = null;
+    let adminSelectedUid = null;
+    let cachedAdminAllowed = false;
+    let cachedAdminMethod = '';
+    let lastBackendSaveAt = 0;
+
+    function getAllElementsMap() {
+        const map = new Map();
+        [...INITIAL_ELEMENTS, ...Object.values(RECIPES)].forEach(el => {
+            if (el && el.name && !map.has(el.name.toLowerCase())) map.set(el.name.toLowerCase(), el);
+        });
+        return map;
+    }
+
+    function cleanupExpiredGrantedInventory() {
+        const now = Date.now();
+        const before = state.inventory.length;
+        state.inventory = state.inventory.filter(it => {
+            const exp = it?.grantExpiresAt;
+            if (!exp) return true;
+            return Number(exp) > now;
+        });
+        if (state.inventory.length !== before) {
+            save();
+            renderInventory();
+        }
+    }
+
+    function getUidForAdminCheck() {
+        const authUid = window._hcAuth?.currentUser?.uid;
+        return authUid || currentPlayer?.id || null;
+    }
+
+    async function checkAdminAccess() {
+        cachedAdminAllowed = false;
+        cachedAdminMethod = '';
+
+        if (!currentPlayer) return { allowed: false, method: '' };
+
+        // safer path: config/adminUids/<uid> === true
+        if (window._hcDb && window._hcDbFns) {
+            const { ref, get } = window._hcDbFns;
+            const uid = getUidForAdminCheck();
+            if (uid) {
+                try {
+                    const snap = await get(ref(window._hcDb, `config/adminUids/${uid}`));
+                    if (snap.exists() && snap.val() === true) {
+                        cachedAdminAllowed = true;
+                        cachedAdminMethod = 'adminUids';
+                        return { allowed: true, method: cachedAdminMethod };
+                    }
+                } catch (e) {
+                    // ignore (permissions might block config)
+                }
+            }
+        }
+
+        // fallback (NOT secure): username == admin
+        if ((currentPlayer.usernameLower || (currentPlayer.username || '').toLowerCase()) === 'admin') {
+            cachedAdminAllowed = true;
+            cachedAdminMethod = 'username';
+            return { allowed: true, method: cachedAdminMethod };
+        }
+
+        return { allowed: false, method: '' };
+    }
+
+    async function refreshAdminUi() {
+        const btn = document.getElementById('btnOpenAdminPanel');
+        if (!btn) return;
+        if (!currentPlayer) {
+            btn.classList.add('hidden');
+            return;
+        }
+        const { allowed } = await checkAdminAccess();
+        btn.classList.toggle('hidden', !allowed);
+        lucide.createIcons();
+    }
+
+    function dismissAnnouncement() {
+        const el = document.getElementById('announcementBar');
+        if (el) el.classList.add('hidden');
+        localStorage.setItem('hc_announcement_dismissed_at', String(Date.now()));
+    }
+
+    function showAnnouncement(text) {
+        const el = document.getElementById('announcementBar');
+        const textEl = document.getElementById('announcementText');
+        if (!el || !textEl) return;
+        textEl.textContent = text || '';
+        if (!text) {
+            el.classList.add('hidden');
+        } else {
+            el.classList.remove('hidden');
+            lucide.createIcons();
+        }
+    }
+
+    function listenAnnouncements() {
+        if (!window._hcDb || !window._hcDbFns) return;
+        const { ref, onValue, off } = window._hcDbFns;
+        const annRef = ref(window._hcDb, 'announcements/current');
+        if (announcementUnsub) announcementUnsub();
+        const handler = (snap) => {
+            const v = snap.exists() ? snap.val() : null;
+            if (!v || !v.active || !v.text) {
+                showAnnouncement('');
+                return;
+            }
+            showAnnouncement(String(v.text));
+        };
+        onValue(annRef, handler, () => {});
+        announcementUnsub = () => off(annRef, 'value', handler);
+    }
+
+    function showBanOverlay(reason, until) {
+        // lightweight: reuse player overlay area to block play
+        const overlay = document.getElementById('playerOverlay');
+        const err = document.getElementById('authError');
+        if (overlay) overlay.classList.remove('hidden');
+        if (err) {
+            const untilText = until && Number(until) > 0 ? ` Until: ${new Date(Number(until)).toLocaleString()}` : '';
+            err.textContent = `BANNED: ${reason || 'No reason provided.'}${untilText}`;
+        }
+    }
+
+    function clearBanOverlayIfAny() {
+        const err = document.getElementById('authError');
+        if (err && err.textContent && err.textContent.startsWith('BANNED:')) err.textContent = '';
+    }
+
+    function listenSelfModeration() {
+        if (!window._hcDb || !window._hcDbFns || !currentPlayer) return;
+        const { ref, onValue, off } = window._hcDbFns;
+
+        // ban status on player doc
+        const pRef = ref(window._hcDb, `players/${currentPlayer.id}`);
+        if (bannedUnsub) bannedUnsub();
+        const banHandler = (snap) => {
+            const v = snap.exists() ? snap.val() : null;
+            const banned = v?.banned;
+            const active = banned?.active === true;
+            const until = Number(banned?.until || 0);
+            const now = Date.now();
+            if (active && (until === 0 || until > now)) {
+                showBanOverlay(banned?.reason || 'Banned', until);
+            } else {
+                clearBanOverlayIfAny();
+            }
+        };
+        onValue(pRef, banHandler, () => {});
+        bannedUnsub = () => off(pRef, 'value', banHandler);
+
+        // warnings stream
+        const wRef = ref(window._hcDb, `moderation/warnings/${currentPlayer.id}`);
+        if (moderationUnsub) moderationUnsub();
+        const warnHandler = (snap) => {
+            if (!snap.exists()) return;
+            const v = snap.val() || {};
+            const ids = Object.keys(v);
+            const lastSeen = localStorage.getItem('hc_warn_last') || '';
+            const newest = ids.sort().slice(-1)[0];
+            if (newest && newest !== lastSeen) {
+                localStorage.setItem('hc_warn_last', newest);
+                const msg = v[newest]?.message || 'You received a warning.';
+                showToast(`Warning: ${msg}`);
+            }
+        };
+        onValue(wRef, warnHandler, () => {});
+        moderationUnsub = () => off(wRef, 'value', warnHandler);
+    }
+
+    async function pullSaveFromBackend() {
+        if (!window._hcDb || !window._hcDbFns || !currentPlayer) return;
+        const { ref, get } = window._hcDbFns;
+        try {
+            const snap = await get(ref(window._hcDb, `playerSaves/${currentPlayer.id}`));
+            if (!snap.exists()) return;
+            const v = snap.val() || {};
+            if (Array.isArray(v.inventory)) state.inventory = v.inventory;
+            if (v.upgrades && typeof v.upgrades === 'object') state.upgrades = { ...state.upgrades, ...v.upgrades };
+            if (typeof v.coins === 'number') state.coins = v.coins;
+            save();
+            cleanupExpiredGrantedInventory();
+            renderInventory();
+            updateUI();
+        } catch (e) {
+            console.warn(e);
+        }
+    }
+
+    async function pushSaveToBackend() {
+        if (!window._hcDb || !window._hcDbFns || !currentPlayer) return;
+        const now = Date.now();
+        if (now - lastBackendSaveAt < 15000) return;
+        lastBackendSaveAt = now;
+        const { ref, set } = window._hcDbFns;
+        try {
+            await set(ref(window._hcDb, `playerSaves/${currentPlayer.id}`), {
+                inventory: state.inventory,
+                upgrades: state.upgrades,
+                coins: state.coins,
+                updatedAt: now
+            });
+        } catch (e) {
+            console.warn(e);
+        }
+    }
+
+    async function onCurrentPlayerChanged() {
+        cleanupExpiredGrantedInventory();
+        await refreshAdminUi();
+        listenAnnouncements();
+        listenSelfModeration();
+        await pullSaveFromBackend();
+        await pushSaveToBackend();
+    }
+
     function setTrashIndicator(active) {
         const el = document.getElementById('trashDropIndicator');
         if (!el) return;
@@ -848,6 +1287,7 @@
         ensurePlayer();
         setAuthMode('signup');
         checkFirebaseStatusOnce().catch(() => {});
+        if (currentPlayer) onCurrentPlayerChanged().catch(() => {});
         startPlaytimeTracking();
         
         if (window.PointerEvent) {
@@ -906,6 +1346,7 @@
         renderProfile();
         renderLeaderboard();
         showToast('Playing as guest');
+        onCurrentPlayerChanged().catch(() => {});
     }
 
     function setAuthMode(mode) {
@@ -944,6 +1385,7 @@
         renderProfile();
         renderLeaderboard();
         await sendProfileToBackend().catch(() => {});
+        await onCurrentPlayerChanged().catch(() => {});
     }
 
     function startPlaytimeTracking() {
@@ -968,16 +1410,18 @@
         savePlayers();
         renderProfile();
         sendProfileToBackend().catch(() => {});
+        pushSaveToBackend().catch(() => {});
     }
 
     async function sendProfileToBackend() {
         if (!currentPlayer || !window._hcDb || !window._hcDbFns) return;
-        const { ref, set } = window._hcDbFns;
+        const { ref, update } = window._hcDbFns;
         const db = window._hcDb;
         const displayName = currentPlayer.displayName || currentPlayer.name || '';
         const username = currentPlayer.username || (currentPlayer.handle ? currentPlayer.handle.replace('@', '') : '');
         const playerRef = ref(db, "players/" + currentPlayer.id);
-        await set(playerRef, {
+        // IMPORTANT: use partial updates so admin-set fields (role/bans/badges) aren't overwritten.
+        await update(playerRef, {
             id: currentPlayer.id,
             name: currentPlayer.name,
             handle: currentPlayer.handle,
@@ -991,7 +1435,6 @@
             bannerUrl: currentPlayer.bannerUrl || '',
             coins: currentPlayer.coins,
             playTimeMs: currentPlayer.playTimeMs,
-            password: currentPlayer.password || '',
             updatedAt: Date.now()
         });
     }
@@ -1209,6 +1652,13 @@
         localStorage.removeItem(STORAGE_KEYS.currentPlayerId);
         currentPlayer = null;
         viewedProfile = null;
+        adminSelectedUid = null;
+        if (announcementUnsub) { announcementUnsub(); announcementUnsub = null; }
+        if (moderationUnsub) { moderationUnsub(); moderationUnsub = null; }
+        if (bannedUnsub) { bannedUnsub(); bannedUnsub = null; }
+        showAnnouncement('');
+        const btn = document.getElementById('btnOpenAdminPanel');
+        if (btn) btn.classList.add('hidden');
         closeMoreOverlay();
         document.getElementById('playerOverlay').classList.remove('hidden');
         showToast('Logged out');
@@ -1360,6 +1810,7 @@
         const avatarSpan = document.getElementById('profileCardAvatar');
         const avatarImg = document.getElementById('profileCardAvatarImg');
         const dnEl = document.getElementById('profileCardDisplayName');
+        const badgesEl = document.getElementById('profileCardBadges');
         const unEl = document.getElementById('profileCardUsername');
         const themeLabel = document.getElementById('profileCardThemeLabel');
         const bioEl = document.getElementById('profileCardBio');
@@ -1383,6 +1834,28 @@
         if (bioEl) bioEl.textContent = bio;
         if (coinsEl) coinsEl.textContent = coins.toLocaleString();
         if (ptEl) ptEl.textContent = `${mins}m`;
+
+        if (badgesEl) {
+            const role = (p.role || '').toLowerCase();
+            const builtIns = [];
+            if (role === 'admin') builtIns.push({ label: 'ADMIN', tone: 'bg-indigo-600/30 border-indigo-400/30 text-indigo-100' });
+            if (role === 'mod') builtIns.push({ label: 'MOD', tone: 'bg-emerald-600/30 border-emerald-400/30 text-emerald-100' });
+            if (p.banned?.active) builtIns.push({ label: 'BANNED', tone: 'bg-rose-600/30 border-rose-400/30 text-rose-100' });
+
+            const custom = Array.isArray(p.badges) ? p.badges : [];
+            const pills = [
+                ...builtIns.map(b => `<span class="inline-flex items-center px-2 py-0.5 rounded-full border ${b.tone} text-[10px] font-semibold">${escapeHtml(b.label)}</span>`),
+                ...custom.slice(0, 12).map(b => {
+                    const label = b?.label || b?.name || 'Badge';
+                    const iconUrl = b?.iconUrl || '';
+                    return `<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border border-white/10 bg-white/5 text-[10px] text-white/80 font-semibold">
+                        ${iconUrl ? `<img src="${escapeHtml(iconUrl)}" class="w-3 h-3 rounded-sm object-cover">` : ''}
+                        <span>${escapeHtml(label)}</span>
+                    </span>`;
+                })
+            ];
+            badgesEl.innerHTML = pills.join('');
+        }
 
         const initials = displayName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
         const pfpUrl = p.pfpUrl || '';
@@ -1560,6 +2033,596 @@
         });
     }
 
+    // ------------------------- Redeem codes -------------------------
+
+    function openRedeemOverlay() {
+        const el = document.getElementById('redeemOverlay');
+        if (el) el.classList.remove('hidden');
+        const err = document.getElementById('redeemError');
+        if (err) err.textContent = '';
+        lucide.createIcons();
+    }
+
+    function closeRedeemOverlay() {
+        const el = document.getElementById('redeemOverlay');
+        if (el) el.classList.add('hidden');
+    }
+
+    function redeemCodeFromUi() {
+        const input = document.getElementById('redeemCodeInput');
+        const err = document.getElementById('redeemError');
+        if (!input || !err) return;
+        const code = (input.value || '').trim();
+        err.textContent = '';
+        redeemCode(code).then((msg) => {
+            if (msg) showToast(msg);
+            input.value = '';
+            closeRedeemOverlay();
+        }).catch((e) => {
+            console.warn(e);
+            const { title } = firebaseErrorSummary(e);
+            err.textContent = title;
+        });
+    }
+
+    async function redeemCode(rawCode) {
+        if (!currentPlayer) throw new Error('Not logged in');
+        if (!window._hcDb || !window._hcDbFns) throw new Error('Firebase not ready');
+
+        const code = String(rawCode || '').trim().toUpperCase().replace(/\s+/g, '');
+        if (!code) throw new Error('Code required');
+
+        const { ref, get, set, update, runTransaction } = window._hcDbFns;
+        const db = window._hcDb;
+        const codeRef = ref(db, `codes/${code}`);
+        const redeemedRef = ref(db, `redemptions/${currentPlayer.id}/${code}`);
+
+        const [codeSnap, redeemedSnap] = await Promise.all([get(codeRef), get(redeemedRef)]);
+        if (!codeSnap.exists()) throw new Error('Invalid code');
+        if (redeemedSnap.exists()) throw new Error('Already redeemed');
+
+        const c = codeSnap.val() || {};
+        if (c.active === false) throw new Error('Code inactive');
+        const now = Date.now();
+        if (c.expiresAt && Number(c.expiresAt) > 0 && now > Number(c.expiresAt)) throw new Error('Code expired');
+        const maxUses = Number(c.maxUses || 0);
+        const uses = Number(c.uses || 0);
+        if (maxUses > 0 && uses >= maxUses) throw new Error('Code fully used');
+
+        const reward = c.reward || {};
+        const coinsAdd = Number(reward.coins || 0);
+        const elements = Array.isArray(reward.elements) ? reward.elements : [];
+        const upgrades = reward.upgrades && typeof reward.upgrades === 'object' ? reward.upgrades : {};
+
+        // increment uses atomically
+        await runTransaction(ref(db, `codes/${code}/uses`), (cur) => (Number(cur || 0) + 1));
+
+        // mark redeemed
+        await set(redeemedRef, { redeemedAt: now });
+
+        // apply rewards locally + backend save
+        if (coinsAdd) state.coins += coinsAdd;
+        Object.keys(upgrades).forEach(k => { if (upgrades[k]) state.upgrades[k] = true; });
+
+        if (elements.length) {
+            const all = getAllElementsMap();
+            elements.forEach(name => {
+                const el = all.get(String(name).toLowerCase());
+                if (!el) return;
+                if (!state.inventory.some(i => (i?.name || '').toLowerCase() === el.name.toLowerCase())) state.inventory.push(el);
+            });
+        }
+
+        save();
+        updateUI();
+        renderInventory();
+        syncPlayerStats();
+        await update(ref(db, `playerSaves/${currentPlayer.id}`), {
+            inventory: state.inventory,
+            upgrades: state.upgrades,
+            coins: state.coins,
+            updatedAt: now
+        });
+
+        return 'Code redeemed';
+    }
+
+    // ------------------------- Admin panel -------------------------
+
+    function openAdminOverlay() {
+        checkAdminAccess().then(({ allowed, method }) => {
+            const err = document.getElementById('adminError');
+            if (!allowed) {
+                showToast('Not admin');
+                if (err) err.textContent = 'Not authorized.';
+                return;
+            }
+            if (method === 'username') {
+                showToast('Admin mode (username) is not secure');
+            }
+            const el = document.getElementById('adminOverlay');
+            if (el) el.classList.remove('hidden');
+            lucide.createIcons();
+        });
+    }
+
+    function closeAdminOverlay() {
+        const el = document.getElementById('adminOverlay');
+        if (el) el.classList.add('hidden');
+    }
+
+    function adminSetError(msg) {
+        const err = document.getElementById('adminError');
+        if (err) err.textContent = msg || '';
+    }
+
+    function adminSetSelected(uid, data = null) {
+        adminSelectedUid = uid || null;
+        const label = document.getElementById('adminSelectedUserLabel');
+        const meta = document.getElementById('adminSelectedUserMeta');
+        if (label) label.textContent = uid ? (data?.displayName || data?.name || '@' + (data?.username || 'user')) : 'None';
+        if (meta) meta.textContent = uid ? `uid: ${uid}` : '';
+    }
+
+    async function adminSearchUsers() {
+        adminSetError('');
+        if (!window._hcDb || !window._hcDbFns) { adminSetError('Firebase not ready'); return; }
+        const { ref, query, orderByChild, startAt, endAt, equalTo, limitToFirst, get } = window._hcDbFns;
+        const input = document.getElementById('adminUserSearchInput');
+        const out = document.getElementById('adminUserResults');
+        if (!input || !out) return;
+        const termRaw = (input.value || '').trim();
+        const term = termRaw.toLowerCase().replace(/^@/, '');
+        out.innerHTML = '';
+        if (!term) return;
+
+        try {
+            // If user pasted a uid, try direct read
+            if (termRaw.startsWith('p_') || termRaw.startsWith('guest_') || termRaw.length > 18) {
+                const snap = await get(ref(window._hcDb, `players/${termRaw}`));
+                if (snap.exists()) {
+                    const v = snap.val();
+                    out.innerHTML = '';
+                    out.appendChild(adminUserRow(termRaw, v));
+                    return;
+                }
+            }
+
+            const qUserEq = query(ref(window._hcDb, 'players'), orderByChild('usernameLower'), equalTo(term), limitToFirst(20));
+            const qName = query(ref(window._hcDb, 'players'), orderByChild('displayNameLower'), startAt(term), endAt(term + '\uf8ff'), limitToFirst(20));
+            const [s1, s2] = await Promise.all([get(qUserEq), get(qName)]);
+            const seen = new Set();
+            const rows = [];
+            const addSnap = (snap) => {
+                if (!snap.exists()) return;
+                snap.forEach(child => {
+                    const v = child.val() || {};
+                    const uid = v.id || child.key;
+                    if (!uid || seen.has(uid)) return;
+                    seen.add(uid);
+                    rows.push(adminUserRow(uid, v));
+                });
+            };
+            addSnap(s1);
+            addSnap(s2);
+            if (!rows.length) {
+                out.innerHTML = '<p class="text-[11px] text-white/60 py-1">No users found.</p>';
+                return;
+            }
+            rows.forEach(r => out.appendChild(r));
+        } catch (e) {
+            console.warn(e);
+            adminSetError(firebaseErrorSummary(e).title);
+        }
+    }
+
+    function adminUserRow(uid, v) {
+        const row = document.createElement('button');
+        row.className = 'w-full text-left px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10';
+        const dn = v?.displayName || v?.name || 'Unknown';
+        const un = v?.username ? '@' + v.username : (v?.handle || '');
+        row.innerHTML = `<div class="flex items-center justify-between gap-3">
+            <div class="flex flex-col">
+                <span class="text-[12px] font-semibold text-white/90">${escapeHtml(dn)}</span>
+                <span class="text-[10px] text-white/60">${escapeHtml(un)}</span>
+            </div>
+            <span class="text-[10px] text-amber-200 font-semibold">${(v?.coins || 0).toLocaleString()}c</span>
+        </div>`;
+        row.onclick = () => {
+            adminSetSelected(uid, v);
+            adminLoadSelected(uid).catch(() => {});
+        };
+        return row;
+    }
+
+    async function adminLoadSelected(uid = null) {
+        adminSetError('');
+        const targetUid = uid || adminSelectedUid;
+        if (!targetUid) return;
+        if (!window._hcDb || !window._hcDbFns) { adminSetError('Firebase not ready'); return; }
+        const { ref, get } = window._hcDbFns;
+        try {
+            const [pSnap, sSnap] = await Promise.all([
+                get(ref(window._hcDb, `players/${targetUid}`)),
+                get(ref(window._hcDb, `playerSaves/${targetUid}`))
+            ]);
+            const p = pSnap.exists() ? pSnap.val() : null;
+            const s = sSnap.exists() ? sSnap.val() : null;
+
+            const meta = document.getElementById('adminSelectedUserMeta');
+            if (meta) {
+                const role = (p?.role || 'normal');
+                const banned = p?.banned?.active ? ` banned(${p?.banned?.reason || ''})` : '';
+                meta.textContent = `uid: ${targetUid} • role: ${role}${banned}`;
+            }
+
+            const invCount = document.getElementById('adminSaveInvCount');
+            const ups = document.getElementById('adminSaveUpgrades');
+            const json = document.getElementById('adminSaveJson');
+            if (invCount) invCount.textContent = Array.isArray(s?.inventory) ? String(s.inventory.length) : '-';
+            if (ups) ups.textContent = s?.upgrades ? Object.keys(s.upgrades).filter(k => s.upgrades[k]).join(', ') || 'none' : '-';
+            if (json) json.value = JSON.stringify({ player: p, save: s }, null, 2);
+
+            // badge preview
+            const preview = document.getElementById('adminBadgePreview');
+            if (preview) {
+                const b = Array.isArray(p?.badges) ? p.badges : [];
+                preview.innerHTML = b.map(x => `<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full border border-white/10 bg-white/5 text-[10px] text-white/80 font-semibold">
+                    ${x?.iconUrl ? `<img src="${escapeHtml(x.iconUrl)}" class="w-3 h-3 rounded-sm object-cover">` : ''}
+                    <span>${escapeHtml(x?.label || x?.name || 'Badge')}</span>
+                </span>`).join('');
+            }
+        } catch (e) {
+            console.warn(e);
+            adminSetError(firebaseErrorSummary(e).title);
+        }
+    }
+
+    function adminPrefillProfileEdits() {
+        if (!adminSelectedUid) return;
+        const json = document.getElementById('adminSaveJson');
+        if (!json) return;
+        try {
+            const parsed = JSON.parse(json.value || '{}');
+            const p = parsed.player || {};
+            const setVal = (id, v) => {
+                const el = document.getElementById(id);
+                if (el) el.value = v || '';
+            };
+            setVal('adminEditDisplayName', p.displayName || p.name || '');
+            setVal('adminEditUsername', p.username || (p.handle ? String(p.handle).replace('@', '') : ''));
+            setVal('adminEditBio', p.bio || '');
+            setVal('adminEditThemeColor', p.themeColor || '');
+            setVal('adminEditPfpUrl', p.pfpUrl || '');
+            setVal('adminEditBannerUrl', p.bannerUrl || '');
+        } catch (_) {}
+    }
+
+    async function adminApplyProfileEdits() {
+        adminSetError('');
+        if (!adminSelectedUid) { adminSetError('Select a user first'); return; }
+        if (!window._hcDb || !window._hcDbFns) { adminSetError('Firebase not ready'); return; }
+        const getVal = (id) => (document.getElementById(id)?.value || '').trim();
+        const displayName = getVal('adminEditDisplayName');
+        const username = getVal('adminEditUsername').replace(/^@/, '');
+        const bio = getVal('adminEditBio');
+        let themeColor = getVal('adminEditThemeColor') || '';
+        const pfpUrl = getVal('adminEditPfpUrl');
+        const bannerUrl = getVal('adminEditBannerUrl');
+
+        if (themeColor && !/^#?[0-9a-fA-F]{6}$/.test(themeColor)) {
+            adminSetError('Theme color must be hex like #5865F2');
+            return;
+        }
+        if (themeColor && !themeColor.startsWith('#')) themeColor = '#' + themeColor;
+
+        const patch = {};
+        if (displayName) {
+            patch.displayName = displayName;
+            patch.displayNameLower = displayName.toLowerCase();
+            patch.name = displayName;
+        }
+        if (username) {
+            patch.username = username;
+            patch.usernameLower = username.toLowerCase();
+            patch.handle = '@' + username;
+        }
+        patch.bio = bio;
+        if (themeColor) patch.themeColor = themeColor;
+        patch.pfpUrl = pfpUrl;
+        patch.bannerUrl = bannerUrl;
+        patch.updatedAt = Date.now();
+
+        const { ref, update } = window._hcDbFns;
+        try {
+            await update(ref(window._hcDb, `players/${adminSelectedUid}`), patch);
+            showToast('Profile updated');
+            adminLoadSelected(adminSelectedUid).catch(() => {});
+        } catch (e) {
+            console.warn(e);
+            adminSetError(firebaseErrorSummary(e).title);
+        }
+    }
+
+    function adminRefreshSelected() {
+        if (!adminSelectedUid) return;
+        adminLoadSelected(adminSelectedUid).catch(() => {});
+    }
+
+    async function adminGiveCoins() {
+        adminSetError('');
+        if (!adminSelectedUid) { adminSetError('Select a user first'); return; }
+        if (!window._hcDb || !window._hcDbFns) { adminSetError('Firebase not ready'); return; }
+        const input = document.getElementById('adminGiveCoinsInput');
+        const amt = Number(input?.value || 0);
+        if (!amt || !Number.isFinite(amt)) { adminSetError('Enter coin amount'); return; }
+        const { ref, runTransaction } = window._hcDbFns;
+        try {
+            await Promise.all([
+                runTransaction(ref(window._hcDb, `players/${adminSelectedUid}/coins`), (cur) => Number(cur || 0) + amt),
+                runTransaction(ref(window._hcDb, `playerSaves/${adminSelectedUid}/coins`), (cur) => Number(cur || 0) + amt)
+            ]);
+            showToast('Coins updated');
+            if (input) input.value = '';
+            adminLoadSelected(adminSelectedUid).catch(() => {});
+        } catch (e) {
+            console.warn(e);
+            adminSetError(firebaseErrorSummary(e).title);
+        }
+    }
+
+    async function adminGrantElement() {
+        adminSetError('');
+        if (!adminSelectedUid) { adminSetError('Select a user first'); return; }
+        if (!window._hcDb || !window._hcDbFns) { adminSetError('Firebase not ready'); return; }
+        const nameInput = document.getElementById('adminGrantElementInput');
+        const expInput = document.getElementById('adminGrantExpiresHoursInput');
+        const name = (nameInput?.value || '').trim();
+        if (!name) { adminSetError('Enter element name'); return; }
+
+        const all = getAllElementsMap();
+        const el = all.get(name.toLowerCase());
+        if (!el) { adminSetError('Unknown element'); return; }
+
+        const hours = Number(expInput?.value || 0);
+        const expiresAt = (expInput && expInput.value !== '') ? (Date.now() + Math.max(0, hours) * 3600 * 1000) : null;
+        const grantItem = expiresAt ? { ...el, grantExpiresAt: expiresAt, grantBy: getUidForAdminCheck() || 'admin' } : { ...el };
+
+        const { ref, get, set } = window._hcDbFns;
+        try {
+            const saveRef = ref(window._hcDb, `playerSaves/${adminSelectedUid}`);
+            const snap = await get(saveRef);
+            const s = snap.exists() ? (snap.val() || {}) : {};
+            const inv = Array.isArray(s.inventory) ? s.inventory : [];
+            if (!inv.some(i => (i?.name || '').toLowerCase() === el.name.toLowerCase())) inv.push(grantItem);
+            await set(saveRef, { ...s, inventory: inv, updatedAt: Date.now() });
+            showToast('Element granted');
+            if (nameInput) nameInput.value = '';
+            if (expInput) expInput.value = '';
+            adminLoadSelected(adminSelectedUid).catch(() => {});
+        } catch (e) {
+            console.warn(e);
+            adminSetError(firebaseErrorSummary(e).title);
+        }
+    }
+
+    async function adminSetRole() {
+        adminSetError('');
+        if (!adminSelectedUid) { adminSetError('Select a user first'); return; }
+        if (!window._hcDb || !window._hcDbFns) { adminSetError('Firebase not ready'); return; }
+        const sel = document.getElementById('adminRoleSelect');
+        const role = (sel?.value || 'normal').toLowerCase();
+        const { ref, update } = window._hcDbFns;
+        try {
+            await update(ref(window._hcDb, `players/${adminSelectedUid}`), { role });
+            showToast('Role updated');
+            adminLoadSelected(adminSelectedUid).catch(() => {});
+        } catch (e) {
+            console.warn(e);
+            adminSetError(firebaseErrorSummary(e).title);
+        }
+    }
+
+    async function adminWarn() {
+        adminSetError('');
+        if (!adminSelectedUid) { adminSetError('Select a user first'); return; }
+        if (!window._hcDb || !window._hcDbFns) { adminSetError('Firebase not ready'); return; }
+        const msgEl = document.getElementById('adminWarnMsgInput');
+        const message = (msgEl?.value || '').trim() || 'Please follow the rules.';
+        const { ref, push, set } = window._hcDbFns;
+        try {
+            const wRef = push(ref(window._hcDb, `moderation/warnings/${adminSelectedUid}`));
+            await set(wRef, { message, by: getUidForAdminCheck() || 'admin', at: Date.now() });
+            showToast('Warning sent');
+            if (msgEl) msgEl.value = '';
+        } catch (e) {
+            console.warn(e);
+            adminSetError(firebaseErrorSummary(e).title);
+        }
+    }
+
+    async function adminBan() {
+        adminSetError('');
+        if (!adminSelectedUid) { adminSetError('Select a user first'); return; }
+        if (!window._hcDb || !window._hcDbFns) { adminSetError('Firebase not ready'); return; }
+        const hoursEl = document.getElementById('adminBanHoursInput');
+        const reasonEl = document.getElementById('adminBanReasonInput');
+        const hours = Number(hoursEl?.value || 0);
+        const reason = (reasonEl?.value || '').trim() || 'Banned by admin';
+        const until = hours <= 0 ? 0 : Date.now() + hours * 3600 * 1000;
+        const { ref, update } = window._hcDbFns;
+        try {
+            await update(ref(window._hcDb, `players/${adminSelectedUid}`), {
+                banned: { active: true, reason, until, by: getUidForAdminCheck() || 'admin', at: Date.now() }
+            });
+            showToast('User banned');
+            if (hoursEl) hoursEl.value = '';
+            if (reasonEl) reasonEl.value = '';
+            adminLoadSelected(adminSelectedUid).catch(() => {});
+        } catch (e) {
+            console.warn(e);
+            adminSetError(firebaseErrorSummary(e).title);
+        }
+    }
+
+    async function adminUnban() {
+        adminSetError('');
+        if (!adminSelectedUid) { adminSetError('Select a user first'); return; }
+        if (!window._hcDb || !window._hcDbFns) { adminSetError('Firebase not ready'); return; }
+        const { ref, update } = window._hcDbFns;
+        try {
+            await update(ref(window._hcDb, `players/${adminSelectedUid}`), { banned: null });
+            showToast('User unbanned');
+            adminLoadSelected(adminSelectedUid).catch(() => {});
+        } catch (e) {
+            console.warn(e);
+            adminSetError(firebaseErrorSummary(e).title);
+        }
+    }
+
+    async function adminAddBadge() {
+        adminSetError('');
+        if (!adminSelectedUid) { adminSetError('Select a user first'); return; }
+        if (!window._hcDb || !window._hcDbFns) { adminSetError('Firebase not ready'); return; }
+        const labelEl = document.getElementById('adminBadgeLabelInput');
+        const urlEl = document.getElementById('adminBadgeIconUrlInput');
+        const fileEl = document.getElementById('adminBadgeIconFileInput');
+        const label = (labelEl?.value || '').trim() || 'Badge';
+        let iconUrl = (urlEl?.value || '').trim();
+        if (!iconUrl && fileEl?.files?.[0]) {
+            iconUrl = await readFileAsDataUrl(fileEl.files[0]);
+        }
+        const badge = { id: 'b_' + Date.now().toString(36), label, iconUrl, at: Date.now(), by: getUidForAdminCheck() || 'admin' };
+        const { ref, get, update } = window._hcDbFns;
+        try {
+            const pRef = ref(window._hcDb, `players/${adminSelectedUid}`);
+            const snap = await get(pRef);
+            const p = snap.exists() ? (snap.val() || {}) : {};
+            const badges = Array.isArray(p.badges) ? p.badges : [];
+            badges.push(badge);
+            await update(pRef, { badges });
+            showToast('Badge added');
+            if (labelEl) labelEl.value = '';
+            if (urlEl) urlEl.value = '';
+            if (fileEl) fileEl.value = '';
+            adminLoadSelected(adminSelectedUid).catch(() => {});
+        } catch (e) {
+            console.warn(e);
+            adminSetError(firebaseErrorSummary(e).title);
+        }
+    }
+
+    async function adminClearBadges() {
+        adminSetError('');
+        if (!adminSelectedUid) { adminSetError('Select a user first'); return; }
+        if (!window._hcDb || !window._hcDbFns) { adminSetError('Firebase not ready'); return; }
+        const { ref, update } = window._hcDbFns;
+        try {
+            await update(ref(window._hcDb, `players/${adminSelectedUid}`), { badges: null });
+            showToast('Badges cleared');
+            adminLoadSelected(adminSelectedUid).catch(() => {});
+        } catch (e) {
+            console.warn(e);
+            adminSetError(firebaseErrorSummary(e).title);
+        }
+    }
+
+    async function adminSetAnnouncement() {
+        adminSetError('');
+        if (!window._hcDb || !window._hcDbFns) { adminSetError('Firebase not ready'); return; }
+        const input = document.getElementById('adminAnnouncementInput');
+        const text = (input?.value || '').trim();
+        if (!text) { adminSetError('Announcement text required'); return; }
+        const { ref, set } = window._hcDbFns;
+        try {
+            await set(ref(window._hcDb, 'announcements/current'), {
+                active: true,
+                text,
+                updatedAt: Date.now(),
+                by: getUidForAdminCheck() || 'admin'
+            });
+            showToast('Announcement set');
+        } catch (e) {
+            console.warn(e);
+            adminSetError(firebaseErrorSummary(e).title);
+        }
+    }
+
+    async function adminClearAnnouncement() {
+        adminSetError('');
+        if (!window._hcDb || !window._hcDbFns) { adminSetError('Firebase not ready'); return; }
+        const { ref, set } = window._hcDbFns;
+        try {
+            await set(ref(window._hcDb, 'announcements/current'), { active: false, text: '', updatedAt: Date.now(), by: getUidForAdminCheck() || 'admin' });
+            showToast('Announcement cleared');
+        } catch (e) {
+            console.warn(e);
+            adminSetError(firebaseErrorSummary(e).title);
+        }
+    }
+
+    async function adminCreateCode() {
+        adminSetError('');
+        if (!window._hcDb || !window._hcDbFns) { adminSetError('Firebase not ready'); return; }
+        const codeEl = document.getElementById('adminCodeNameInput');
+        const coinsEl = document.getElementById('adminCodeCoinsInput');
+        const maxEl = document.getElementById('adminCodeMaxUsesInput');
+        const elemsEl = document.getElementById('adminCodeElementsInput');
+        const expEl = document.getElementById('adminCodeExpiresHoursInput');
+        const errEl = document.getElementById('adminCodeError');
+        if (errEl) errEl.textContent = '';
+
+        const code = String(codeEl?.value || '').trim().toUpperCase().replace(/\s+/g, '');
+        if (!code) { if (errEl) errEl.textContent = 'Code required'; return; }
+
+        const coins = Number(coinsEl?.value || 0);
+        const maxUses = Number(maxEl?.value || 0);
+        const expiresHours = Number(expEl?.value || 0);
+        const expiresAt = expEl && expEl.value !== '' ? (Date.now() + Math.max(0, expiresHours) * 3600 * 1000) : null;
+
+        const elementsRaw = String(elemsEl?.value || '').split(',').map(s => s.trim()).filter(Boolean);
+        const all = getAllElementsMap();
+        const elements = elementsRaw.filter(n => all.has(n.toLowerCase()));
+
+        const up = {
+            doubleCoins: !!document.getElementById('adminCodeUpDouble')?.checked,
+            autoMiner: !!document.getElementById('adminCodeUpAuto')?.checked,
+            speedSpawner: !!document.getElementById('adminCodeUpSpeed')?.checked
+        };
+        const anyUp = Object.values(up).some(Boolean);
+
+        const payload = {
+            active: true,
+            createdAt: Date.now(),
+            createdBy: getUidForAdminCheck() || 'admin',
+            maxUses: maxUses > 0 ? maxUses : 0,
+            uses: 0,
+            expiresAt: expiresAt || 0,
+            reward: {
+                coins: coins > 0 ? coins : 0,
+                elements,
+                upgrades: anyUp ? up : {}
+            }
+        };
+
+        const { ref, set } = window._hcDbFns;
+        try {
+            await set(ref(window._hcDb, `codes/${code}`), payload);
+            showToast('Code created');
+            if (codeEl) codeEl.value = '';
+            if (coinsEl) coinsEl.value = '';
+            if (maxEl) maxEl.value = '';
+            if (elemsEl) elemsEl.value = '';
+            if (expEl) expEl.value = '';
+            document.getElementById('adminCodeUpDouble').checked = false;
+            document.getElementById('adminCodeUpAuto').checked = false;
+            document.getElementById('adminCodeUpSpeed').checked = false;
+        } catch (e) {
+            console.warn(e);
+            if (errEl) errEl.textContent = firebaseErrorSummary(e).title;
+        }
+    }
+
     async function searchPlayersCombined(fromMoreOverlay = false) {
         if (!window._hcDb || !window._hcDbFns) return;
         const { ref, query, orderByChild, startAt, endAt, get, limitToFirst } = window._hcDbFns;
@@ -1650,6 +2713,8 @@
 
     function openVisitedProfile(player) {
         viewedProfile = player;
+        // Fix overlay stacking: More overlay sits above Profile overlay in DOM.
+        closeMoreOverlay();
         document.getElementById('profileOverlay').classList.remove('hidden');
         loadProfileOverlay(false, player);
     }
@@ -1677,6 +2742,7 @@
                 renderProfile();
                 renderLeaderboard();
                 showToast('Signed in with Google');
+                onCurrentPlayerChanged().catch(() => {});
             } else {
                 setAuthMode('signup');
                 document.getElementById('playerOverlay').classList.remove('hidden');
@@ -1770,6 +2836,7 @@
             renderProfile();
             renderLeaderboard();
             showToast('Account created');
+            onCurrentPlayerChanged().catch(() => {});
         } catch (e) {
             console.warn(e);
             const { title, hint } = firebaseErrorSummary(e);
@@ -1831,6 +2898,7 @@
             renderProfile();
             renderLeaderboard();
             showToast('Logged in');
+            onCurrentPlayerChanged().catch(() => {});
         } catch (e) {
             console.warn(e);
             const { title, hint } = firebaseErrorSummary(e);
@@ -1838,8 +2906,28 @@
         }
     }
 
+    async function refreshGlobalPlayers() {
+        if (!window._hcDb || !window._hcDbFns) return;
+        const { ref, query, orderByChild, limitToLast, get } = window._hcDbFns;
+        try {
+            const snap = await get(query(ref(window._hcDb, 'players'), orderByChild('coins'), limitToLast(200)));
+            const arr = [];
+            if (snap.exists()) {
+                snap.forEach(childSnap => {
+                    const v = childSnap.val() || {};
+                    arr.push({ id: v.id || childSnap.key, ...v });
+                });
+            }
+            globalPlayers = arr;
+        } catch (e) {
+            console.warn(e);
+        }
+    }
+
     function openLeaderboard() {
         loadPlayers();
+        // try to show global board if Firebase works
+        refreshGlobalPlayers().then(() => renderLeaderboard()).catch(() => {});
         renderLeaderboard();
         document.getElementById('leaderboardOverlay').classList.remove('hidden');
     }
@@ -1852,13 +2940,13 @@
         const listEl = document.getElementById('leaderboardList');
         if (!listEl) return;
         const search = (document.getElementById('leaderboardSearch')?.value || '').toLowerCase();
-        const data = [...players];
+        const data = (globalPlayers && globalPlayers.length ? [...globalPlayers] : [...players]);
         data.sort((a, b) => {
             if (b.coins !== a.coins) return b.coins - a.coins;
             return (b.playTimeMs || 0) - (a.playTimeMs || 0);
         });
         const filtered = search
-            ? data.filter(p => p.name.toLowerCase().includes(search))
+            ? data.filter(p => (p.name || '').toLowerCase().includes(search) || (p.displayName || '').toLowerCase().includes(search) || (p.username || '').toLowerCase().includes(search))
             : data;
         if (!filtered.length) {
             listEl.innerHTML = '<p class="text-[11px] text-slate-400 py-2 text-center">No players yet.</p>';
