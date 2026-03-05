@@ -271,6 +271,10 @@
                     <i data-lucide="shopping-bag" class="w-5 h-5"></i>
                     <span class="hidden md:inline font-bold text-sm">Shop</span>
                 </button>
+                <button onclick="switchTab('minigames')" id="tabMiniGames" class="w-full flex items-center gap-3 p-3 rounded-xl transition-all text-slate-400">
+                    <i data-lucide="dice-5" class="w-5 h-5"></i>
+                    <span class="hidden md:inline font-bold text-sm">Mini games</span>
+                </button>
                 <button onclick="openChatScreen()" id="tabChat" class="w-full flex items-center gap-3 p-3 rounded-xl transition-all text-slate-400">
                     <i data-lucide="message-circle" class="w-5 h-5"></i>
                     <span class="hidden md:inline font-bold text-sm">Chat</span>
@@ -386,6 +390,17 @@
                     </div>
                 </div>
             </div>
+
+            <div id="miniGamesContainer" class="hidden space-y-3 text-xs">
+                <div class="px-3">
+                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Mini games</h3>
+                    <p class="text-[11px] text-slate-500">Play <span class="font-semibold text-indigo-600">Guess</span> by betting your coins on Yes / No markets.</p>
+                </div>
+                <div class="px-3">
+                    <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Guess markets</h4>
+                    <div id="miniGamesGuessList" class="space-y-2 max-h-72 overflow-y-auto custom-scroll"></div>
+                </div>
+            </div>
         </div>
 
         <div id="sidebarControls" class="p-4 border-t bg-slate-50">
@@ -451,6 +466,24 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <div id="miniGameRight" class="absolute inset-0 hidden bg-slate-950 text-xs text-slate-50">
+            <div class="flex flex-col h-full">
+                <div class="px-4 py-3 flex items-center justify-between border-b border-slate-800 bg-slate-900/80 backdrop-blur">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="dice-5" class="w-4 h-4 text-amber-400"></i>
+                        <div class="flex flex-col">
+                            <h3 class="text-[11px] font-black uppercase tracking-[0.2em]">Guess</h3>
+                            <p id="miniGameGuessSubtitle" class="text-[10px] text-slate-400 truncate"></p>
+                        </div>
+                    </div>
+                    <button onclick="closeMiniGameScreen()" class="px-2 py-1 rounded-lg border border-slate-700 text-[10px] text-slate-300 hover:bg-slate-800">
+                        Back to Lab
+                    </button>
+                </div>
+                <div id="miniGameGuessDetail" class="flex-1 overflow-y-auto custom-scroll px-4 py-3 space-y-3"></div>
             </div>
         </div>
     </div>
@@ -922,6 +955,28 @@
                         <textarea id="adminSaveJson" rows="8" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[11px] outline-none font-mono"></textarea>
                     </div>
 
+                    <div class="bg-white/5 rounded-2xl p-3 border border-white/10 space-y-2">
+                        <p class="uppercase text-[10px] text-white/60 font-semibold">Mini game: Guess</p>
+                        <div class="space-y-2">
+                            <input id="adminGuessTitle" type="text" placeholder="Title" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none">
+                            <textarea id="adminGuessDescription" rows="2" placeholder="Description" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none"></textarea>
+                            <input id="adminGuessImage" type="text" placeholder="Image URL (optional)" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none">
+                            <div class="grid grid-cols-2 gap-2">
+                                <input id="adminGuessStartMinutes" type="number" placeholder="start in minutes (0=now)" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none">
+                                <input id="adminGuessDurationMinutes" type="number" placeholder="duration minutes" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none">
+                            </div>
+                            <button onclick="adminCreateGuessGame()" class="w-full py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[11px] font-semibold text-slate-900">Create Guess</button>
+                        </div>
+                        <div class="mt-3 border-t border-white/10 pt-2">
+                            <p class="uppercase text-[10px] text-white/60 font-semibold mb-1">Existing Guess games</p>
+                            <div id="adminGuessGamesList" class="space-y-1 max-h-40 overflow-y-auto custom-scroll text-[11px]"></div>
+                        </div>
+                        <div class="mt-2 border-t border-white/10 pt-2">
+                            <p class="uppercase text-[10px] text-white/60 font-semibold mb-1">Selected Game Bets</p>
+                            <div id="adminGuessBetsDetail" class="space-y-1 max-h-40 overflow-y-auto custom-scroll text-[11px] text-white/80"></div>
+                        </div>
+                    </div>
+
                     <p id="adminError" class="text-[11px] text-rose-300 min-h-[16px]"></p>
                 </div>
             </div>
@@ -989,10 +1044,14 @@
         currentPlayerId: 'hc_player_id_v1'
     };
 
+    const DEFAULT_UPGRADES = { doubleCoins: false, autoMiner: false, speedSpawner: false };
+
     let state = {
-        inventory: JSON.parse(localStorage.getItem(STORAGE_KEYS.inventory)) || [...INITIAL_ELEMENTS],
-        coins: parseInt(localStorage.getItem(STORAGE_KEYS.coins)) || 0,
-        upgrades: JSON.parse(localStorage.getItem(STORAGE_KEYS.upgrades)) || { doubleCoins: false, autoMiner: false, speedSpawner: false },
+        // IMPORTANT: do NOT load lab progress from global localStorage here.
+        // Progress is loaded per-account in onCurrentPlayerChanged() to prevent cross-account leaks.
+        inventory: [...INITIAL_ELEMENTS],
+        coins: 0,
+        upgrades: { ...DEFAULT_UPGRADES },
         theme: localStorage.getItem(STORAGE_KEYS.theme) || 'light'
     };
 
@@ -1019,6 +1078,45 @@
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#39;');
+    }
+
+    function getPlayerScopedStorageKey(kind) {
+        // Theme is intentionally global across accounts (UI preference).
+        if (kind === 'theme') return STORAGE_KEYS.theme;
+        const base = STORAGE_KEYS[kind] || kind;
+        const pid = currentPlayer?.id;
+        return pid ? `${base}_${pid}` : base;
+    }
+
+    function ensureStarterElementsInState() {
+        INITIAL_ELEMENTS.forEach(el => {
+            if (!state.inventory.some(i => i?.name === el.name)) state.inventory.push(el);
+        });
+    }
+
+    function resetLabStateToDefaults() {
+        state.inventory = [...INITIAL_ELEMENTS];
+        state.coins = 0;
+        state.upgrades = { ...DEFAULT_UPGRADES };
+    }
+
+    function loadLocalSaveForCurrentPlayer() {
+        // Local cache per account (prevents cross-account bleed + speeds up first paint).
+        try {
+            const invRaw = localStorage.getItem(getPlayerScopedStorageKey('inventory'));
+            const coinsRaw = localStorage.getItem(getPlayerScopedStorageKey('coins'));
+            const upRaw = localStorage.getItem(getPlayerScopedStorageKey('upgrades'));
+
+            const inv = invRaw ? JSON.parse(invRaw) : null;
+            const ups = upRaw ? JSON.parse(upRaw) : null;
+
+            if (Array.isArray(inv)) state.inventory = inv;
+            if (coinsRaw != null && coinsRaw !== '') state.coins = Number(coinsRaw) || 0;
+            if (ups && typeof ups === 'object') state.upgrades = { ...DEFAULT_UPGRADES, ...ups };
+        } catch (_) {
+            // ignore corrupt cache
+        }
+        ensureStarterElementsInState();
     }
 
     function firebaseErrorSummary(err) {
@@ -1279,7 +1377,7 @@
         const { ref, get } = window._hcDbFns;
         try {
             const snap = await get(ref(window._hcDb, `playerSaves/${currentPlayer.id}`));
-            if (!snap.exists()) return;
+            if (!snap.exists()) return false;
             const v = snap.val() || {};
             if (Array.isArray(v.inventory)) state.inventory = v.inventory;
             if (v.upgrades && typeof v.upgrades === 'object') state.upgrades = { ...state.upgrades, ...v.upgrades };
@@ -1288,15 +1386,17 @@
             cleanupExpiredGrantedInventory();
             renderInventory();
             updateUI();
+            return true;
         } catch (e) {
             console.warn(e);
+            return false;
         }
     }
 
-    async function pushSaveToBackend() {
+    async function pushSaveToBackend(force = false) {
         if (!window._hcDb || !window._hcDbFns || !currentPlayer) return;
         const now = Date.now();
-        if (now - lastBackendSaveAt < 15000) return;
+        if (!force && now - lastBackendSaveAt < 15000) return;
         lastBackendSaveAt = now;
         const { ref, set } = window._hcDbFns;
         try {
@@ -1312,12 +1412,24 @@
     }
 
     async function onCurrentPlayerChanged() {
+        // Prevent cross-account progress bleed:
+        // Always reset, then load per-account local cache, then pull cloud save.
+        resetLabStateToDefaults();
+        loadLocalSaveForCurrentPlayer();
+
         cleanupExpiredGrantedInventory();
         await refreshAdminUi();
         listenAnnouncements();
         listenSelfModeration();
-        await pullSaveFromBackend();
-        await pushSaveToBackend();
+        const hasCloud = await pullSaveFromBackend();
+        // If this account has no cloud save yet, create one with clean defaults (not prior account's data).
+        if (!hasCloud) {
+            ensureStarterElementsInState();
+            save();
+            renderInventory();
+            updateUI();
+            await pushSaveToBackend(true);
+        }
     }
 
     function setTrashIndicator(active) {
@@ -1332,10 +1444,8 @@
         lucide.createIcons();
         applyTheme(state.theme);
 
-        // Ensure new starter elements appear for existing saves
-        INITIAL_ELEMENTS.forEach(el => {
-            if (!state.inventory.some(i => i.name === el.name)) state.inventory.push(el);
-        });
+        // Ensure new starter elements appear for current in-memory state
+        ensureStarterElementsInState();
 
         // Sanitize legacy saved names (based on emoji/rarity)
         state.inventory = state.inventory.map(i => {
@@ -1484,7 +1594,7 @@
 
     async function sendProfileToBackend() {
         if (!currentPlayer || !window._hcDb || !window._hcDbFns) return;
-        const { ref, update } = window._hcDbFns;
+        const { ref, update, get } = window._hcDbFns;
         const db = window._hcDb;
         const displayName = currentPlayer.displayName || currentPlayer.name || '';
         const username = currentPlayer.username || (currentPlayer.handle ? currentPlayer.handle.replace('@', '') : '');
@@ -1506,6 +1616,25 @@
             playTimeMs: currentPlayer.playTimeMs,
             updatedAt: Date.now()
         });
+
+        // Best-effort: refresh our own conversation metadata so others see updated name/pfp.
+        try {
+            const convSnap = await get(ref(db, `userConversations/${currentPlayer.id}`));
+            if (convSnap.exists()) {
+                const convs = convSnap.val() || {};
+                const updates = Object.keys(convs).map(cid => {
+                    const c = convs[cid] || {};
+                    return update(ref(db, `userConversations/${currentPlayer.id}/${cid}`), {
+                        name: displayName || currentPlayer.name || c.name,
+                        otherHandle: username ? '@' + username : (currentPlayer.handle || c.otherHandle || ''),
+                        otherAvatar: currentPlayer.pfpUrl || c.otherAvatar || ''
+                    }).catch(() => {});
+                });
+                await Promise.all(updates);
+            }
+        } catch (_) {
+            // ignore if rules prevent this
+        }
     }
 
     function getCustomHTML(item) {
@@ -1740,13 +1869,26 @@
         setTimeout(() => t.classList.remove('active'), 2500);
     }
 
+    function showMiniGameScreen(show) {
+        const boardEl = document.getElementById('board');
+        const miniEl = document.getElementById('miniGameRight');
+        if (!boardEl || !miniEl) return;
+        miniEl.classList.toggle('hidden', !show);
+        boardEl.classList.toggle('hidden', !!show || chatScreenOpen);
+    }
+
+    function closeMiniGameScreen() {
+        showMiniGameScreen(false);
+    }
+
     function showChatScreen(show) {
         chatScreenOpen = !!show;
         const boardEl = document.getElementById('board');
         const chatEl = document.getElementById('chatRight');
+        const miniGameEl = document.getElementById('miniGameRight');
         const tabChat = document.getElementById('tabChat');
         if (boardEl && chatEl) {
-            boardEl.classList.toggle('hidden', chatScreenOpen);
+            boardEl.classList.toggle('hidden', chatScreenOpen || (miniGameEl && !miniGameEl.classList.contains('hidden')));
             chatEl.classList.toggle('hidden', !chatScreenOpen);
         }
         if (tabChat) {
@@ -1793,17 +1935,22 @@
         document.getElementById('inventoryContainer').classList.toggle('hidden', t !== 'inventory');
         document.getElementById('libraryContainer').classList.toggle('hidden', t !== 'library');
         document.getElementById('shopContainer').classList.toggle('hidden', t !== 'shop');
+        const miniGamesContainer = document.getElementById('miniGamesContainer');
+        if (miniGamesContainer) miniGamesContainer.classList.toggle('hidden', t !== 'minigames');
         document.getElementById('tabInv').classList.toggle('tab-active', t === 'inventory');
         document.getElementById('tabLib').classList.toggle('tab-active', t === 'library');
         document.getElementById('tabShop').classList.toggle('tab-active', t === 'shop');
+        const tabMini = document.getElementById('tabMiniGames');
+        if (tabMini) tabMini.classList.toggle('tab-active', t === 'minigames');
         const tabChat = document.getElementById('tabChat');
         if (tabChat) tabChat.classList.toggle('tab-active', chatScreenOpen);
-        if (chatScreenOpen && t !== 'inventory' && t !== 'library' && t !== 'shop') {
+        if (chatScreenOpen && t !== 'inventory' && t !== 'library' && t !== 'shop' && t !== 'minigames') {
             // no-op
         } else if (t !== 'chat') {
             hideChatScreen();
         }
         if (t === 'library') updateLibrary();
+        if (t === 'minigames') loadGuessMarkets().catch(() => {});
     }
 
     function showDiscovery(item) {
@@ -1835,9 +1982,10 @@
     }
 
     function save() {
-        localStorage.setItem(STORAGE_KEYS.inventory, JSON.stringify(state.inventory));
-        localStorage.setItem(STORAGE_KEYS.coins, state.coins);
-        localStorage.setItem(STORAGE_KEYS.upgrades, JSON.stringify(state.upgrades));
+        // Per-account save keys for lab progress; theme stays global.
+        localStorage.setItem(getPlayerScopedStorageKey('inventory'), JSON.stringify(state.inventory));
+        localStorage.setItem(getPlayerScopedStorageKey('coins'), String(state.coins || 0));
+        localStorage.setItem(getPlayerScopedStorageKey('upgrades'), JSON.stringify(state.upgrades || {}));
         localStorage.setItem(STORAGE_KEYS.theme, state.theme);
     }
 
@@ -2153,27 +2301,43 @@
         const convRef = ref(window._hcDb, `userConversations/${myUid}/${convId}`);
         const snap = await get(convRef);
         if (!snap.exists()) {
-            const name = targetPlayer?.displayName || targetPlayer?.name || '@user';
-            const otherHandle = targetPlayer?.username
+            const targetName = targetPlayer?.displayName || targetPlayer?.name || '@user';
+            const targetHandle = targetPlayer?.username
                 ? '@' + targetPlayer.username
                 : (targetPlayer?.handle || '');
-            const otherAvatar = targetPlayer?.pfpUrl || '';
-            const meta = {
+            const targetAvatar = targetPlayer?.pfpUrl || '';
+
+            const myName = currentPlayer.displayName || currentPlayer.name || '@me';
+            const myHandle = currentPlayer.username
+                ? '@' + currentPlayer.username
+                : (currentPlayer.handle || '');
+            const myAvatar = currentPlayer.pfpUrl || '';
+
+            const base = {
                 convId,
                 isGroup: false,
-                otherUid: targetUid,
-                name,
-                otherHandle,
-                otherAvatar,
                 lastMessage: '',
                 lastAt: Date.now()
             };
+
+            const myMeta = {
+                ...base,
+                otherUid: targetUid,
+                name: targetName,
+                otherHandle: targetHandle,
+                otherAvatar: targetAvatar
+            };
+
+            const theirMeta = {
+                ...base,
+                otherUid: myUid,
+                name: myName,
+                otherHandle: myHandle,
+                otherAvatar: myAvatar
+            };
             await Promise.all([
-                set(ref(window._hcDb, `userConversations/${myUid}/${convId}`), meta),
-                set(ref(window._hcDb, `userConversations/${targetUid}/${convId}`), {
-                    ...meta,
-                    otherUid: myUid
-                })
+                set(ref(window._hcDb, `userConversations/${myUid}/${convId}`), myMeta),
+                set(ref(window._hcDb, `userConversations/${targetUid}/${convId}`), theirMeta)
             ]);
         }
         activeConvId = convId;
@@ -2198,10 +2362,14 @@
             const name = c.name || 'Chat';
             const handle = c.otherHandle || '';
             const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || 'HC';
-            btn.innerHTML = `<div class="flex items-center gap-2">
-                <div class="h-7 w-7 rounded-full bg-slate-800 text-white flex items-center justify-center text-[10px] font-bold">
+            const avatar = c.otherAvatar || '';
+            const avatarHtml = avatar
+                ? `<img src="${escapeHtml(avatar)}" class="h-7 w-7 rounded-full object-cover border border-slate-200" />`
+                : `<div class="h-7 w-7 rounded-full bg-slate-800 text-white flex items-center justify-center text-[10px] font-bold">
                     ${escapeHtml(initials)}
-                </div>
+                   </div>`;
+            btn.innerHTML = `<div class="flex items-center gap-2">
+                ${avatarHtml}
                 <div class="flex flex-col min-w-0">
                     <span class="text-[11px] font-semibold truncate">${escapeHtml(name)}</span>
                     <span class="text-[10px] text-slate-500 truncate">${escapeHtml(handle || c.lastMessage || '')}</span>
@@ -2460,6 +2628,312 @@
         const meta = document.getElementById('adminSelectedUserMeta');
         if (label) label.textContent = uid ? (data?.displayName || data?.name || '@' + (data?.username || 'user')) : 'None';
         if (meta) meta.textContent = uid ? `uid: ${uid}` : '';
+    }
+
+    // ------------------------- Mini game: Guess (admin) -------------------------
+
+    function getNowMs() {
+        return Date.now();
+    }
+
+    function isGuessGameActive(game) {
+        const now = getNowMs();
+        const start = Number(game?.startAt || 0);
+        const end = Number(game?.endAt || 0);
+        if (start && now < start) return false;
+        if (end && now > end) return false;
+        return true;
+    }
+
+    async function loadGuessMarkets() {
+        if (!window._hcDb || !window._hcDbFns) return;
+        const list = document.getElementById('miniGamesGuessList');
+        if (!list) return;
+        list.innerHTML = '<p class="text-[11px] text-slate-500">Loading...</p>';
+        const { ref, get } = window._hcDbFns;
+        try {
+            const snap = await get(ref(window._hcDb, 'guessGames'));
+            if (!snap.exists()) {
+                list.innerHTML = '<p class="text-[11px] text-slate-500">No Guess games yet.</p>';
+                return;
+            }
+            const val = snap.val() || {};
+            const games = Object.values(val).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+            list.innerHTML = '';
+            games.forEach(g => {
+                const active = isGuessGameActive(g);
+                const btn = document.createElement('button');
+                btn.className = 'w-full text-left px-3 py-2 rounded-2xl border text-[11px] flex items-center gap-3 ' +
+                    (active ? 'bg-white/80 border-slate-200 hover:bg-white' : 'bg-slate-100 border-slate-200/60 opacity-70');
+                const total = (g.yesTotal || 0) + (g.noTotal || 0);
+                btn.innerHTML = `
+                    <div class="flex-1 min-w-0">
+                        <p class="font-semibold truncate">${escapeHtml(g.title || 'Untitled')}</p>
+                        <p class="text-[10px] text-slate-500 truncate">${escapeHtml(g.description || '')}</p>
+                        <p class="text-[10px] ${active ? 'text-emerald-500' : 'text-slate-400'}">${active ? 'Active' : 'Closed'} • ${total}c</p>
+                    </div>
+                    <i data-lucide="chevron-right" class="w-3 h-3 text-slate-400"></i>
+                `;
+                btn.onclick = () => openGuessGame(g.id);
+                list.appendChild(btn);
+            });
+            lucide.createIcons();
+        } catch (e) {
+            console.warn(e);
+            list.innerHTML = '<p class="text-[11px] text-rose-500">Failed to load Guess games.</p>';
+        }
+    }
+
+    async function openGuessGame(gameId) {
+        if (!window._hcDb || !window._hcDbFns) return;
+        const detail = document.getElementById('miniGameGuessDetail');
+        const subtitle = document.getElementById('miniGameGuessSubtitle');
+        if (!detail || !subtitle) return;
+        const { ref, get } = window._hcDbFns;
+        try {
+            const snap = await get(ref(window._hcDb, `guessGames/${gameId}`));
+            if (!snap.exists()) {
+                showToast('Game not found');
+                return;
+            }
+            const g = snap.val() || {};
+            const active = isGuessGameActive(g);
+            const totalYes = Number(g.yesTotal || 0);
+            const totalNo = Number(g.noTotal || 0);
+            const total = totalYes + totalNo;
+            subtitle.textContent = g.title || 'Guess';
+
+            const now = getNowMs();
+            const startAt = Number(g.startAt || 0);
+            const endAt = Number(g.endAt || 0);
+            const windowText = `${startAt ? new Date(startAt).toLocaleString() : 'now'} → ${endAt ? new Date(endAt).toLocaleString() : 'no end'}`;
+
+            let myBetInfo = '';
+            if (currentPlayer && window._hcDb && window._hcDbFns) {
+                try {
+                    const betSnap = await get(ref(window._hcDb, `guessBets/${gameId}/${currentPlayer.id}`));
+                    if (betSnap.exists()) {
+                        const b = betSnap.val() || {};
+                        myBetInfo = `<p class="text-[11px] text-slate-300">Your bet: <span class="${b.side === 'yes' ? 'text-emerald-300' : 'text-rose-300'} font-semibold">${(b.side || '').toUpperCase()}</span> • ${Number(b.amount || 0)}c</p>`;
+                    }
+                } catch (_) {}
+            }
+
+            const imgHtml = g.imageUrl
+                ? `<img src="${escapeHtml(g.imageUrl)}" class="w-full max-h-56 object-cover rounded-2xl border border-slate-800/80 mb-3" />`
+                : '';
+
+            detail.innerHTML = `
+                <div class="space-y-3">
+                    ${imgHtml}
+                    <div>
+                        <h2 class="text-sm font-bold mb-1">${escapeHtml(g.title || 'Untitled')}</h2>
+                        <p class="text-[11px] text-slate-300 mb-1">${escapeHtml(g.description || '')}</p>
+                        <p class="text-[10px] text-slate-500">Window: ${escapeHtml(windowText)}</p>
+                    </div>
+                    <div class="flex items-center justify-between text-[11px]">
+                        <span class="text-emerald-300">Yes: ${totalYes}c</span>
+                        <span class="text-rose-300">No: ${totalNo}c</span>
+                        <span class="text-slate-400">Total: ${total}c</span>
+                    </div>
+                    ${myBetInfo}
+                    <div class="mt-2 p-3 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2">
+                        <p class="text-[10px] uppercase tracking-[0.16em] text-slate-500">Place bet</p>
+                        <div class="flex items-center gap-2">
+                            <input id="guessBetAmountInput" type="number" min="1" placeholder="Amount (coins)" class="flex-1 px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-[11px] outline-none">
+                            <button onclick="placeGuessBet('${gameId}','yes')" class="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[11px] font-semibold text-slate-950">Yes</button>
+                            <button onclick="placeGuessBet('${gameId}','no')" class="px-3 py-1.5 rounded-xl bg-rose-500 hover:bg-rose-400 text-[11px] font-semibold text-slate-950">No</button>
+                        </div>
+                        <p class="text-[10px] text-slate-500 mt-1">${active ? 'Active' : 'Betting closed'} • Your balance: ${(state.coins || 0)}c</p>
+                    </div>
+                </div>
+            `;
+            showMiniGameScreen(true);
+        } catch (e) {
+            console.warn(e);
+            showToast('Failed to open game');
+        }
+    }
+
+    async function placeGuessBet(gameId, side) {
+        if (!currentPlayer) { showToast('Log in first'); return; }
+        if (!window._hcDb || !window._hcDbFns) { showToast('Firebase not ready'); return; }
+        const amtEl = document.getElementById('guessBetAmountInput');
+        const raw = (amtEl?.value || '').trim();
+        const amount = Number(raw || 0);
+        if (!amount || amount <= 0) { showToast('Enter amount'); return; }
+        if (amount > state.coins) { showToast('Not enough coins'); return; }
+
+        const { ref, get, runTransaction, set } = window._hcDbFns;
+        try {
+            const gameSnap = await get(ref(window._hcDb, `guessGames/${gameId}`));
+            if (!gameSnap.exists()) { showToast('Game not found'); return; }
+            const g = gameSnap.val() || {};
+            if (!isGuessGameActive(g)) { showToast('Betting closed'); return; }
+
+            // Deduct coins locally and in backend save.
+            state.coins -= amount;
+            if (state.coins < 0) state.coins = 0;
+            updateUI();
+
+            await Promise.all([
+                runTransaction(ref(window._hcDb, `playerSaves/${currentPlayer.id}/coins`), (cur) => {
+                    const curNum = Number(cur || 0);
+                    const next = curNum - amount;
+                    return next >= 0 ? next : curNum;
+                }),
+                runTransaction(ref(window._hcDb, `guessGames/${gameId}/${side === 'yes' ? 'yesTotal' : 'noTotal'}`), (cur) => Number(cur || 0) + amount),
+                set(ref(window._hcDb, `guessBets/${gameId}/${currentPlayer.id}`), {
+                    uid: currentPlayer.id,
+                    displayName: currentPlayer.displayName || currentPlayer.name || '',
+                    username: currentPlayer.username || '',
+                    side,
+                    amount,
+                    placedAt: getNowMs()
+                })
+            ]);
+
+            showToast('Bet placed');
+            if (amtEl) amtEl.value = '';
+            await openGuessGame(gameId);
+            if (typeof adminViewGuessBets === 'function') {
+                adminViewGuessBets(gameId).catch(() => {});
+            }
+        } catch (e) {
+            console.warn(e);
+            showToast('Failed to place bet');
+        }
+    }
+
+    async function adminCreateGuessGame() {
+        adminSetError('');
+        if (!currentPlayer) { adminSetError('Select an admin account'); return; }
+        if (!window._hcDb || !window._hcDbFns) { adminSetError('Firebase not ready'); return; }
+        const titleEl = document.getElementById('adminGuessTitle');
+        const descEl = document.getElementById('adminGuessDescription');
+        const imgEl = document.getElementById('adminGuessImage');
+        const startMinEl = document.getElementById('adminGuessStartMinutes');
+        const durMinEl = document.getElementById('adminGuessDurationMinutes');
+        const title = (titleEl?.value || '').trim();
+        const description = (descEl?.value || '').trim();
+        const imageUrl = (imgEl?.value || '').trim();
+        const startMinutes = Number(startMinEl?.value || 0);
+        const durationMinutes = Number(durMinEl?.value || 0);
+        if (!title) { adminSetError('Title required'); return; }
+        if (durationMinutes <= 0) { adminSetError('Duration minutes > 0 required'); return; }
+
+        const now = getNowMs();
+        const startAt = startMinutes > 0 ? now + startMinutes * 60000 : now;
+        const endAt = startAt + durationMinutes * 60000;
+
+        const { ref, push, set } = window._hcDbFns;
+        try {
+            const gameRef = push(ref(window._hcDb, 'guessGames'));
+            const id = gameRef.key;
+            await set(gameRef, {
+                id,
+                title,
+                description,
+                imageUrl,
+                startAt,
+                endAt,
+                createdAt: now,
+                createdByUid: currentPlayer.id,
+                createdByName: currentPlayer.displayName || currentPlayer.name || '',
+                yesTotal: 0,
+                noTotal: 0,
+                status: 'open'
+            });
+            showToast('Guess game created');
+            if (titleEl) titleEl.value = '';
+            if (descEl) descEl.value = '';
+            if (imgEl) imgEl.value = '';
+            if (startMinEl) startMinEl.value = '';
+            if (durMinEl) durMinEl.value = '';
+            await adminLoadGuessGames();
+        } catch (e) {
+            console.warn(e);
+            adminSetError('Failed to create guess game');
+        }
+    }
+
+    async function adminLoadGuessGames() {
+        if (!window._hcDb || !window._hcDbFns) return;
+        const list = document.getElementById('adminGuessGamesList');
+        if (!list) return;
+        list.innerHTML = '<p class="text-[11px] text-white/60">Loading...</p>';
+        const { ref, get } = window._hcDbFns;
+        try {
+            const snap = await get(ref(window._hcDb, 'guessGames'));
+            if (!snap.exists()) {
+                list.innerHTML = '<p class="text-[11px] text-white/60">No guess games.</p>';
+                return;
+            }
+            const val = snap.val() || {};
+            const games = Object.values(val).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+            list.innerHTML = '';
+            games.forEach(g => {
+                const row = document.createElement('button');
+                row.className = 'w-full text-left px-2 py-1 rounded-lg bg-black/30 hover:bg-black/40 flex items-center justify-between gap-2';
+                const active = isGuessGameActive(g);
+                row.innerHTML = `
+                    <div class="flex flex-col">
+                        <span class="text-[11px] font-semibold">${escapeHtml(g.title || 'Untitled')}</span>
+                        <span class="text-[10px] text-white/60">${active ? 'Active' : 'Closed'}</span>
+                    </div>
+                    <span class="text-[10px] text-emerald-300">${(g.yesTotal || 0) + (g.noTotal || 0)}c</span>
+                `;
+                row.onclick = () => adminViewGuessBets(g.id);
+                list.appendChild(row);
+            });
+        } catch (e) {
+            console.warn(e);
+            list.innerHTML = '<p class="text-[11px] text-rose-300">Failed to load games.</p>';
+        }
+    }
+
+    async function adminViewGuessBets(gameId) {
+        const out = document.getElementById('adminGuessBetsDetail');
+        if (!out) return;
+        out.innerHTML = '<p class="text-[11px] text-white/60">Loading bets...</p>';
+        if (!window._hcDb || !window._hcDbFns) return;
+        const { ref, get } = window._hcDbFns;
+        try {
+            const snap = await get(ref(window._hcDb, `guessBets/${gameId}`));
+            if (!snap.exists()) {
+                out.innerHTML = '<p class="text-[11px] text-white/60">No bets yet.</p>';
+                return;
+            }
+            const val = snap.val() || {};
+            const bets = Object.values(val).sort((a, b) => (a.placedAt || 0) - (b.placedAt || 0));
+            let yesTotal = 0;
+            let noTotal = 0;
+            bets.forEach(b => {
+                if (b.side === 'yes') yesTotal += Number(b.amount || 0);
+                if (b.side === 'no') noTotal += Number(b.amount || 0);
+            });
+            out.innerHTML = `
+                <div class="flex items-center justify-between mb-1">
+                    <span class="text-[10px] text-emerald-300">Yes: ${yesTotal}c</span>
+                    <span class="text-[10px] text-rose-300">No: ${noTotal}c</span>
+                </div>
+            `;
+            bets.forEach(b => {
+                const row = document.createElement('div');
+                row.className = 'flex items-center justify-between px-2 py-1 rounded bg-black/30';
+                row.innerHTML = `
+                    <div class="flex flex-col">
+                        <span class="text-[11px] font-semibold">${escapeHtml(b.displayName || b.username || b.uid || 'user')}</span>
+                        <span class="text-[10px] ${b.side === 'yes' ? 'text-emerald-300' : 'text-rose-300'}">${b.side?.toUpperCase() || ''}</span>
+                    </div>
+                    <span class="text-[11px] font-semibold">${Number(b.amount || 0)}c</span>
+                `;
+                out.appendChild(row);
+            });
+        } catch (e) {
+            console.warn(e);
+            out.innerHTML = '<p class="text-[11px] text-rose-300">Failed to load bets.</p>';
+        }
     }
 
     async function adminSearchUsers() {
