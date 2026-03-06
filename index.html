@@ -124,6 +124,10 @@
         .ember { position: absolute; bottom: -10px; background: #ff4d00; width: 4px; height: 4px; border-radius: 50%; filter: blur(1px); animation: rise var(--d) infinite linear; }
         @keyframes rise { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-60px); opacity: 0; } }
 
+        .money-scroll { max-width: 150px; overflow-x: auto; white-space: nowrap; scrollbar-width: thin; }
+        .money-scroll::-webkit-scrollbar { height: 3px; }
+        .money-scroll::-webkit-scrollbar-thumb { background: #f59e0b; border-radius: 3px; }
+
         @keyframes pulse-void { 0%, 100% { box-shadow: 0 0 10px rgba(99, 102, 241, 0.3); } 50% { box-shadow: 0 0 25px rgba(99, 102, 241, 0.6); } }
         @keyframes shine { 0% { transform: translateX(-200%) skewX(-30deg); } 100% { transform: translateX(300%) skewX(-30deg); } }
 
@@ -240,7 +244,7 @@
                     <i data-lucide="database" class="w-4 h-4 text-amber-600"></i>
                     <div class="flex flex-col">
                         <span class="text-[10px] text-slate-400 font-bold uppercase mb-1 leading-none">Credits</span>
-                        <span id="coinBalance" class="font-black text-slate-800 text-lg leading-none max-w-[150px] overflow-x-auto custom-scroll whitespace-nowrap scrollbar-thin scrollbar-amber-600">0</span>
+                        <span id="coinBalance" class="font-black text-slate-800 text-lg leading-none money-scroll">0</span>
                     </div>
                 </div>
                 <button
@@ -397,31 +401,23 @@
 
             <div id="miniGamesContainer" class="hidden space-y-3 text-xs">
                 <div class="px-3">
-                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Mini games</h3>
-                    <p class="text-[11px] text-slate-500">Choose a game to play on the right side panel.</p>
-                </div>
-                <div class="px-3">
-                    <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Available Games</h4>
+                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Mini Games</h3>
                     <div class="grid grid-cols-1 gap-2">
-                        <button onclick="startMiniGame('guess')" class="p-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-semibold text-[11px] hover:from-indigo-600 hover:to-purple-700 transition-all transform hover:scale-105 shadow-lg">
+                        <button onclick="showGameOnRight('guess')" class="p-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-semibold text-[11px] hover:from-indigo-600 hover:to-purple-700 transition-all transform hover:scale-105 shadow-lg">
                             <div class="flex items-center gap-2">
                                 <i data-lucide="target" class="w-4 h-4"></i>
                                 <span>🎯 Guess Game</span>
                             </div>
                             <p class="text-[9px] opacity-90 mt-1">Bet on Yes/No outcomes</p>
                         </button>
-                        <button onclick="startMiniGame('blackjack')" class="p-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl font-semibold text-[11px] hover:from-emerald-600 hover:to-teal-700 transition-all transform hover:scale-105 shadow-lg">
+                        <button onclick="showGameOnRight('blackjack')" class="p-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl font-semibold text-[11px] hover:from-emerald-600 hover:to-teal-700 transition-all transform hover:scale-105 shadow-lg">
                             <div class="flex items-center gap-2">
                                 <i data-lucide="spade" class="w-4 h-4"></i>
                                 <span>🃏 Blackjack</span>
                             </div>
-                            <p class="text-[9px] opacity-90 mt-1">Classic card game vs bot</p>
+                            <p class="text-[9px] opacity-90 mt-1">Play vs bot or real players</p>
                         </button>
                     </div>
-                </div>
-                <div class="px-3">
-                    <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Active Markets</h4>
-                    <div id="miniGamesGuessList" class="space-y-2 max-h-72 overflow-y-auto custom-scroll"></div>
                 </div>
             </div>
         </div>
@@ -468,7 +464,12 @@
                                 Refresh
                             </button>
                         </div>
-                        <div id="chatConversationList" class="flex-1 overflow-y-auto custom-scroll text-[11px]"></div>
+                        <div class="flex-1 overflow-y-auto custom-scroll">
+                            <p class="px-2 py-1 text-[10px] text-slate-400 uppercase font-semibold">Online Users</p>
+                            <div id="chatOnlineUsersList" class="px-2 pb-2 space-y-1"></div>
+                            <p class="px-2 py-1 text-[10px] text-slate-400 uppercase font-semibold border-t border-slate-200">Conversations</p>
+                            <div id="chatConversationList" class="px-2 pb-2 text-[11px]"></div>
+                        </div>
                     </div>
                     <div class="flex-1 flex flex-col bg-slate-50">
                         <div id="chatMessages" class="flex-1 overflow-y-auto custom-scroll px-3 py-2 text-[11px] space-y-1"></div>
@@ -497,15 +498,15 @@
                     <div class="flex items-center gap-2">
                         <i data-lucide="dice-5" class="w-4 h-4 text-amber-400"></i>
                         <div class="flex flex-col">
-                            <h3 class="text-[11px] font-black uppercase tracking-[0.2em]">Guess</h3>
-                            <p id="miniGameGuessSubtitle" class="text-[10px] text-slate-400 truncate"></p>
+                            <h3 id="miniGameTitle" class="text-[11px] font-black uppercase tracking-[0.2em]">Game</h3>
+                            <p id="miniGameSubtitle" class="text-[10px] text-slate-400 truncate"></p>
                         </div>
                     </div>
                     <button onclick="closeMiniGameScreen()" class="px-2 py-1 rounded-lg border border-slate-700 text-[10px] text-slate-300 hover:bg-slate-800">
                         Back to Lab
                     </button>
                 </div>
-                <div id="miniGameGuessDetail" class="flex-1 overflow-y-auto custom-scroll px-4 py-3 space-y-3"></div>
+                <div id="miniGameContent" class="flex-1 overflow-y-auto custom-scroll px-4 py-3 space-y-3"></div>
             </div>
         </div>
     </div>
@@ -807,6 +808,13 @@
                     </button>
                 </div>
                 <button
+                    onclick="openResetPasswordOverlay()"
+                    class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-[#313338] hover:bg-[#3f4147] text-[11px] font-semibold"
+                >
+                    <i data-lucide="key" class="w-4 h-4"></i>
+                    Reset Password
+                </button>
+                <button
                     onclick="restartData()"
                     class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-[#313338] hover:bg-[#3f4147] text-[11px] font-semibold"
                 >
@@ -844,6 +852,33 @@
                 <p id="redeemError" class="text-[10px] text-rose-400 min-h-[14px]"></p>
                 <button onclick="redeemCodeFromUi()" class="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[11px] font-semibold text-slate-900">
                     Redeem
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reset Password overlay -->
+<div id="resetPasswordOverlay" class="fixed inset-0 bg-slate-900/80 backdrop-blur-xl z-[116] flex items-center justify-center hidden">
+    <div class="bg-[#1e1f22] text-white rounded-3xl w-full max-w-md mx-4 shadow-2xl overflow-hidden">
+        <div class="h-16 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-between px-6">
+            <div>
+                <p class="text-[10px] uppercase tracking-[0.2em] text-indigo-100/80 font-semibold">Security</p>
+                <p class="text-sm font-semibold">Reset Password</p>
+            </div>
+            <button onclick="closeResetPasswordOverlay()" class="p-1.5 rounded-full bg-black/30 hover:bg-black/50">
+                <i data-lucide="x" class="w-4 h-4 text-slate-100"></i>
+            </button>
+        </div>
+        <div class="px-6 py-5 space-y-3 text-xs">
+            <div class="bg-[#2b2d31] rounded-2xl p-3 border border-[#3f4247] space-y-2">
+                <p class="uppercase text-[10px] text-slate-400 font-semibold">Change Your Password</p>
+                <input id="resetCurrentPasswordInput" type="password" placeholder="Current password" class="w-full px-3 py-2 rounded-xl bg-[#1e1f22] border border-[#3f4247] text-[12px] outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                <input id="resetNewPasswordInput" type="password" placeholder="New password (min 4 chars)" class="w-full px-3 py-2 rounded-xl bg-[#1e1f22] border border-[#3f4247] text-[12px] outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                <input id="resetConfirmPasswordInput" type="password" placeholder="Confirm new password" class="w-full px-3 py-2 rounded-xl bg-[#1e1f22] border border-[#3f4247] text-[12px] outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                <p id="resetPasswordError" class="text-[10px] text-rose-400 min-h-[14px]"></p>
+                <button onclick="submitResetPassword()" class="w-full py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-[11px] font-semibold text-white">
+                    Update Password
                 </button>
             </div>
         </div>
@@ -1001,9 +1036,28 @@
                             <input id="adminGuessImage" type="text" placeholder="Image URL (optional)" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none">
                             <div class="grid grid-cols-2 gap-2">
                                 <input id="adminGuessStartMinutes" type="number" placeholder="start in minutes (0=now)" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none">
-                                <input id="adminGuessDurationMinutes" type="number" placeholder="duration minutes" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none">
+                                <input id="adminGuessDurationMinutes" type="number" placeholder="duration minutes *" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none">
                             </div>
+                            
+                            <!-- New customization options -->
+                            <div class="border-t border-white/10 pt-2 mt-2">
+                                <p class="text-[10px] text-white/40 mb-2">Advanced Settings (optional)</p>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <input id="adminGuessMinBet" type="number" placeholder="min bet (default: 1)" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none">
+                                    <input id="adminGuessMaxBet" type="number" placeholder="max bet (default: none)" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none">
+                                </div>
+                                <div class="grid grid-cols-2 gap-2 mt-2">
+                                    <input id="adminGuessPayoutMultiplier" type="number" step="0.1" placeholder="payout mult (default: 2.0)" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none">
+                                    <input id="adminGuessCategory" type="text" placeholder="category (optional)" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none">
+                                </div>
+                                <label class="flex items-center gap-2 mt-2 text-[11px] text-white/70">
+                                    <input id="adminGuessAllowMultipleBets" type="checkbox" checked>
+                                    Allow multiple bets per user
+                                </label>
+                            </div>
+                            
                             <button onclick="adminCreateGuessGame()" class="w-full py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[11px] font-semibold text-slate-900">Create Guess</button>
+                            <p class="text-[9px] text-white/40">* Duration is required. Game will auto-expire after this time.</p>
                         </div>
                         <div class="mt-3 border-t border-white/10 pt-2">
                             <p class="uppercase text-[10px] text-white/60 font-semibold mb-1">Existing Guess games</p>
@@ -1012,7 +1066,48 @@
                         <div class="mt-2 border-t border-white/10 pt-2">
                             <p class="uppercase text-[10px] text-white/60 font-semibold mb-1">Selected Game Bets</p>
                             <div id="adminGuessBetsDetail" class="space-y-1 max-h-40 overflow-y-auto custom-scroll text-[11px] text-white/80"></div>
+                            <div id="adminGuessResultSection" class="mt-3 flex gap-2">
+                                <button onclick="adminSetGuessResultFromButton('yes')" class="flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-[11px] font-semibold">Set YES Wins</button>
+                                <button onclick="adminSetGuessResultFromButton('no')" class="flex-1 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-[11px] font-semibold">Set NO Wins</button>
+                            </div>
                         </div>
+                    </div>
+
+                    <div class="mt-2 border-t border-white/10 pt-2">
+                        <p class="uppercase text-[10px] text-white/60 font-semibold mb-1">Element Creation</p>
+                        <div class="space-y-2">
+                            <input id="adminElementName" type="text" placeholder="Element name (e.g., Jayden)" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none">
+                            <input id="adminElementEmoji" type="text" placeholder="Emoji (e.g., 🤯)" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none">
+                            <select id="adminElementRarity" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none">
+                                <option value="normal">Normal</option>
+                                <option value="gold">Gold</option>
+                                <option value="diamond">Diamond</option>
+                                <option value="void">Void</option>
+                                <option value="brown">Brown</option>
+                                <option value="verified">Verified</option>
+                                <option value="food">Food</option>
+                                <option value="67">67</option>
+                                <option value="dumb">Dumb</option>
+                                <option value="glitch">Glitch</option>
+                                <option value="cosmic">Cosmic</option>
+                                <option value="fire">Fire</option>
+                            </select>
+                            <input id="adminElementFlavor" type="text" placeholder="Flavor text (optional)" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none">
+                            <p class="text-[10px] text-white/40">Mix Recipe: Select 2 ingredients below</p>
+                            <div class="grid grid-cols-2 gap-2">
+                                <select id="adminElementMix1" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none">
+                                    <option value="">-- Ingredient 1 --</option>
+                                </select>
+                                <select id="adminElementMix2" class="w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-[12px] outline-none">
+                                    <option value="">-- Ingredient 2 --</option>
+                                </select>
+                            </div>
+                            <button onclick="adminCreateElement()" class="w-full py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[11px] font-semibold text-slate-900">Create Element</button>
+                        </div>
+                    </div>
+                    <div class="mt-2 border-t border-white/10 pt-2">
+                        <p class="uppercase text-[10px] text-white/60 font-semibold mb-1">View/Edit Elements</p>
+                        <div id="adminElementsList" class="space-y-1 max-h-40 overflow-y-auto custom-scroll text-[11px]"></div>
                     </div>
 
                     <p id="adminError" class="text-[11px] text-rose-300 min-h-[16px]"></p>
@@ -1070,7 +1165,7 @@
         "Anson+Jonny": { name: "Jason", emoji:"👶", rarity: "gold", flavor: "femboy" },
         "Jonny+Moses": { name: "Matthew", emoji:"💀", rarity: "gold", flavor: "admin" },
         "Matthew+Matthew": { name: "Aden wong", emoji:"💀", rarity: "dumb", flavor: "admin" },
-        "Johnny+Johnny": { name: "Jayden Cheung", emoji:"🤯", rarity: "dumb", flavor: "Soxxxx" }
+        "Jonny+Jonny": { name: "Jayden Cheung", emoji:"🤯", rarity: "dumb", flavor: "Soxxxx" }
     };
 
     const STORAGE_KEYS = {
@@ -1544,14 +1639,20 @@
     }
 
     function playAsGuest() {
+        // Get next guest number
+        let guestCounter = parseInt(localStorage.getItem('guestCounter') || '0') + 1;
+        localStorage.setItem('guestCounter', guestCounter.toString());
+        const guestCode = guestCounter.toString().padStart(2, '0');
+        
         const id = 'guest_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-        const displayName = 'Guest';
-        const handle = '@guest';
+        const displayName = 'Guest ' + guestCode;
+        const handle = '@guest' + guestCode;
         currentPlayer = {
             id,
             name: displayName,
             handle,
             displayName,
+            guestCode,
             coins: state.coins,
             playTimeMs: 0,
             lastSeen: Date.now()
@@ -1562,7 +1663,7 @@
         document.getElementById('playerOverlay').classList.add('hidden');
         renderProfile();
         renderLeaderboard();
-        showToast('Playing as guest');
+        showToast('Playing as ' + displayName);
         onCurrentPlayerChanged().catch(() => {});
     }
 
@@ -2416,6 +2517,53 @@
             btn.onclick = () => { activeConvId = c.convId; loadChatMessages(c.convId); };
             list.appendChild(btn);
         });
+        // Also load online users
+        await loadChatOnlineUsers();
+    }
+
+    async function loadChatOnlineUsers() {
+        if (!window._hcDb || !window._hcDbFns || !currentPlayer) return;
+        const { ref, get } = window._hcDbFns;
+        const list = document.getElementById('chatOnlineUsersList');
+        if (!list) return;
+        list.innerHTML = '<p class="text-[10px] text-slate-400 py-1">Loading...</p>';
+        try {
+            const snap = await get(ref(window._hcDb, 'players'));
+            if (!snap.exists()) {
+                list.innerHTML = '<p class="text-[10px] text-slate-400 py-1">No users</p>';
+                return;
+            }
+            const val = snap.val() || {};
+            const now = Date.now();
+            // Filter online users (active in last 5 minutes, not self)
+            const online = Object.values(val).filter(p => {
+                if (p.id === currentPlayer.id) return false;
+                if (!p.lastSeen) return false;
+                return (now - p.lastSeen) < 300000; // 5 minutes
+            }).slice(0, 20); // Limit to 20 users
+            
+            list.innerHTML = '';
+            if (!online.length) {
+                list.innerHTML = '<p class="text-[10px] text-slate-400 py-1">No users online</p>';
+                return;
+            }
+            online.forEach(p => {
+                const btn = document.createElement('button');
+                btn.className = 'w-full text-left px-2 py-1.5 rounded-lg hover:bg-slate-100 flex items-center gap-2';
+                const name = p.displayName || p.name || 'User';
+                const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || 'U';
+                const avatar = p.pfpUrl || '';
+                const avatarHtml = avatar
+                    ? `<img src="${escapeHtml(avatar)}" class="h-6 w-6 rounded-full object-cover border border-slate-200" />`
+                    : `<div class="h-6 w-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[9px] font-bold">${escapeHtml(initials)}</div>`;
+                btn.innerHTML = `${avatarHtml}<div class="flex flex-col min-w-0"><span class="text-[11px] font-semibold truncate">${escapeHtml(name)}</span><span class="text-[9px] text-emerald-600">● online</span></div>`;
+                btn.onclick = () => { ensureConversationWith(p.id, p); openChatScreen(); };
+                list.appendChild(btn);
+            });
+        } catch (e) {
+            console.warn(e);
+            list.innerHTML = '<p class="text-[10px] text-slate-400 py-1">Failed to load</p>';
+        }
     }
 
     async function loadChatMessages(convId) {
@@ -2793,12 +2941,17 @@
         }
     }
 
-    async function placeGuessBet(gameId, side) {
+    async function placeGuessBet(gameId, side, providedAmount) {
         if (!currentPlayer) { showToast('Log in first'); return; }
         if (!window._hcDb || !window._hcDbFns) { showToast('Firebase not ready'); return; }
-        const amtEl = document.getElementById('guessBetAmountInput');
-        const raw = (amtEl?.value || '').trim();
-        const amount = Number(raw || 0);
+        
+        // Get amount from input or provided
+        const amtEl = document.getElementById('guessBetAmountInput') || document.getElementById('guessBetAmount');
+        let amount = providedAmount;
+        if (!amount || amount <= 0) {
+            const raw = (amtEl?.value || '').trim();
+            amount = Number(raw || 0);
+        }
         if (!amount || amount <= 0) { showToast('Enter amount'); return; }
         if (amount > state.coins) { showToast('Not enough coins'); return; }
 
@@ -2809,27 +2962,30 @@
             const g = gameSnap.val() || {};
             if (!isGuessGameActive(g)) { showToast('Betting closed'); return; }
 
-            // Deduct coins locally and in backend save.
-            state.coins -= amount;
-            if (state.coins < 0) state.coins = 0;
-            updateUI();
+            // First, save the bet to Firebase
+            await set(ref(window._hcDb, `guessBets/${gameId}/${currentPlayer.id}`), {
+                uid: currentPlayer.id,
+                displayName: currentPlayer.displayName || currentPlayer.name || '',
+                username: currentPlayer.username || '',
+                side,
+                amount,
+                placedAt: getNowMs()
+            });
 
+            // Then update totals and deduct coins in transaction
             await Promise.all([
                 runTransaction(ref(window._hcDb, `playerSaves/${currentPlayer.id}/coins`), (cur) => {
                     const curNum = Number(cur || 0);
-                    const next = curNum - amount;
-                    return next >= 0 ? next : curNum;
+                    if (curNum < amount) return curNum; // Don't go below 0
+                    return curNum - amount;
                 }),
-                runTransaction(ref(window._hcDb, `guessGames/${gameId}/${side === 'yes' ? 'yesTotal' : 'noTotal'}`), (cur) => Number(cur || 0) + amount),
-                set(ref(window._hcDb, `guessBets/${gameId}/${currentPlayer.id}`), {
-                    uid: currentPlayer.id,
-                    displayName: currentPlayer.displayName || currentPlayer.name || '',
-                    username: currentPlayer.username || '',
-                    side,
-                    amount,
-                    placedAt: getNowMs()
-                })
+                runTransaction(ref(window._hcDb, `guessGames/${gameId}/${side === 'yes' ? 'yesTotal' : 'noTotal'}`), (cur) => Number(cur || 0) + amount)
             ]);
+
+            // Only deduct locally after successful Firebase update
+            state.coins -= amount;
+            if (state.coins < 0) state.coins = 0;
+            updateUI();
 
             showToast('Bet placed');
             if (amtEl) amtEl.value = '';
@@ -2839,7 +2995,7 @@
             }
         } catch (e) {
             console.warn(e);
-            showToast('Failed to place bet');
+            showToast('Failed to place bet - no coins deducted');
         }
     }
 
@@ -2852,13 +3008,28 @@
         const imgEl = document.getElementById('adminGuessImage');
         const startMinEl = document.getElementById('adminGuessStartMinutes');
         const durMinEl = document.getElementById('adminGuessDurationMinutes');
+        const minBetEl = document.getElementById('adminGuessMinBet');
+        const maxBetEl = document.getElementById('adminGuessMaxBet');
+        const payoutMultEl = document.getElementById('adminGuessPayoutMultiplier');
+        const categoryEl = document.getElementById('adminGuessCategory');
+        const allowMultiEl = document.getElementById('adminGuessAllowMultipleBets');
+        
         const title = (titleEl?.value || '').trim();
         const description = (descEl?.value || '').trim();
         const imageUrl = (imgEl?.value || '').trim();
         const startMinutes = Number(startMinEl?.value || 0);
         const durationMinutes = Number(durMinEl?.value || 0);
+        const minBet = Number(minBetEl?.value || 1);
+        const maxBet = Number(maxBetEl?.value || 0);
+        const payoutMultiplier = Number(payoutMultEl?.value || 2.0);
+        const category = (categoryEl?.value || '').trim();
+        const allowMultipleBets = allowMultiEl?.checked ?? true;
+        
         if (!title) { adminSetError('Title required'); return; }
         if (durationMinutes <= 0) { adminSetError('Duration minutes > 0 required'); return; }
+        if (minBet < 1) { adminSetError('Min bet must be at least 1'); return; }
+        if (maxBet > 0 && maxBet < minBet) { adminSetError('Max bet must be >= min bet'); return; }
+        if (payoutMultiplier < 1) { adminSetError('Payout multiplier must be at least 1.0'); return; }
 
         const now = getNowMs();
         const startAt = startMinutes > 0 ? now + startMinutes * 60000 : now;
@@ -2868,7 +3039,7 @@
         try {
             const gameRef = push(ref(window._hcDb, 'guessGames'));
             const id = gameRef.key;
-            await set(gameRef, {
+            const gameData = {
                 id,
                 title,
                 description,
@@ -2880,14 +3051,26 @@
                 createdByName: currentPlayer.displayName || currentPlayer.name || '',
                 yesTotal: 0,
                 noTotal: 0,
-                status: 'open'
-            });
+                status: 'open',
+                // New customization fields
+                minBet: Math.max(1, minBet),
+                maxBet: maxBet > 0 ? maxBet : null,
+                payoutMultiplier: payoutMultiplier || 2.0,
+                category: category || null,
+                allowMultipleBets
+            };
+            await set(gameRef, gameData);
             showToast('Guess game created');
+            // Clear form
             if (titleEl) titleEl.value = '';
             if (descEl) descEl.value = '';
             if (imgEl) imgEl.value = '';
             if (startMinEl) startMinEl.value = '';
             if (durMinEl) durMinEl.value = '';
+            if (minBetEl) minBetEl.value = '';
+            if (maxBetEl) maxBetEl.value = '';
+            if (payoutMultEl) payoutMultEl.value = '';
+            if (categoryEl) categoryEl.value = '';
             await adminLoadGuessGames();
         } catch (e) {
             console.warn(e);
@@ -2931,6 +3114,8 @@
     }
 
     async function adminViewGuessBets(gameId) {
+        // Store selected game ID for result setting
+        window.adminSelectedGuessGameId = gameId;
         const out = document.getElementById('adminGuessBetsDetail');
         if (!out) return;
         out.innerHTML = '<p class="text-[11px] text-white/60">Loading bets...</p>';
@@ -2973,6 +3158,116 @@
             out.innerHTML = '<p class="text-[11px] text-rose-300">Failed to load bets.</p>';
         }
     }
+
+    async function adminSetGuessResultFromButton(result) {
+        const gameId = window.adminSelectedGuessGameId;
+        if (!gameId) { showToast('Select a game first'); return; }
+        await adminSetGuessResult(gameId, result);
+    }
+
+    async function adminSetGuessResult(gameId, result) {
+        // result should be 'yes' or 'no'
+        if (!currentPlayer || !window._hcDb || !window._hcDbFns) return;
+        adminSetError('');
+        const { ref, get, update, set, runTransaction } = window._hcDbFns;
+        try {
+            const gameSnap = await get(ref(window._hcDb, `guessGames/${gameId}`));
+            if (!gameSnap.exists()) { adminSetError('Game not found'); return; }
+            const game = gameSnap.val();
+            
+            // Check if already processed
+            if (game.status === 'closed' && game.result) {
+                adminSetError('Game already has a result');
+                return;
+            }
+            
+            const betsSnap = await get(ref(window._hcDb, `guessBets/${gameId}`));
+            if (!betsSnap.exists()) {
+                // No bets, just close the game
+                await update(ref(window._hcDb, `guessGames/${gameId}`), { status: 'closed', result, endedAt: Date.now(), endedBy: currentPlayer.id });
+                showToast('Game closed (no bets)');
+                adminLoadGuessGames();
+                return;
+            }
+            const bets = betsSnap.val() || {};
+            const now = Date.now();
+            let totalPaid = 0;
+            
+            // Process each bet
+            for (const [uid, bet] of Object.entries(bets)) {
+                const won = bet.side === result;
+                const notification = {
+                    id: 'notif_' + now + '_' + Math.random().toString(36).slice(2),
+                    gameId,
+                    gameTitle: game.title,
+                    betSide: bet.side,
+                    result,
+                    amount: bet.amount,
+                    type: won ? 'win' : 'loss',
+                    seen: false,
+                    createdAt: now
+                };
+                if (won) {
+                    // Winner gets their bet multiplied by the game's payout multiplier
+                    const multiplier = game.payoutMultiplier || 2.0;
+                    const winnings = Math.floor(bet.amount * multiplier);
+                    await runTransaction(ref(window._hcDb, `players/${uid}/coins`), (cur) => (Number(cur || 0) + winnings));
+                    await runTransaction(ref(window._hcDb, `playerSaves/${uid}/coins`), (cur) => (Number(cur || 0) + winnings));
+                    totalPaid += winnings;
+                }
+                // Send notification
+                await set(ref(window._hcDb, `playerNotifications/${uid}/guessResults/${notification.id}`), notification);
+            }
+            
+            // Close the game
+            await update(ref(window._hcDb, `guessGames/${gameId}`), { 
+                status: 'closed', 
+                result, 
+                endedAt: now,
+                endedBy: currentPlayer.id,
+                totalPaid
+            });
+            showToast(`Result set: ${result.toUpperCase()} wins! Paid ${totalPaid}c`);
+            adminLoadGuessGames();
+        } catch (e) {
+            console.warn(e);
+            adminSetError('Failed to set result');
+        }
+    }
+
+    // Auto-process expired games
+    async function processExpiredGuessGames() {
+        if (!window._hcDb || !window._hcDbFns) return;
+        const { ref, get, update, set, runTransaction } = window._hcDbFns;
+        try {
+            const snap = await get(ref(window._hcDb, 'guessGames'));
+            if (!snap.exists()) return;
+            const games = snap.val() || {};
+            const now = Date.now();
+            
+            for (const [gameId, game] of Object.entries(games)) {
+                // Skip if already closed or no end time
+                if (game.status === 'closed' || !game.endAt) continue;
+                
+                // Check if game has expired
+                if (now > game.endAt && isGuessGameActive(game) === false) {
+                    // Game expired but not closed - auto-close with no result
+                    // Admin will need to manually set result for payout
+                    await update(ref(window._hcDb, `guessGames/${gameId}`), {
+                        status: 'expired',
+                        expiredAt: now,
+                        autoExpired: true
+                    });
+                    console.log(`Game ${gameId} auto-expired`);
+                }
+            }
+        } catch (e) {
+            console.warn('Error processing expired games:', e);
+        }
+    }
+
+    // Run expired game check every minute
+    setInterval(processExpiredGuessGames, 60000);
 
     async function adminSearchUsers() {
         adminSetError('');
@@ -3335,6 +3630,140 @@
             console.warn(e);
             adminSetError(firebaseErrorSummary(e).title);
         }
+    }
+
+    // Element Creation Functions
+    function populateElementMixDropdowns() {
+        const mix1 = document.getElementById('adminElementMix1');
+        const mix2 = document.getElementById('adminElementMix2');
+        if (!mix1 || !mix2) return;
+        
+        // Get all element names from INITIAL_ELEMENTS, RECIPES, and archive
+        const allElements = new Set();
+        
+        // Add from INITIAL_ELEMENTS
+        INITIAL_ELEMENTS.forEach(el => {
+            if (el && el.name) allElements.add(el.name);
+        });
+        
+        // Add from RECIPES
+        Object.values(RECIPES).forEach(el => {
+            if (el && el.name) allElements.add(el.name);
+        });
+        
+        // Add from discovered elements archive (if loaded)
+        const archiveElements = document.querySelectorAll('#archiveList .element-name');
+        archiveElements.forEach(el => {
+            if (el.textContent) allElements.add(el.textContent.trim());
+        });
+        
+        // Also add from any stored inventory elements
+        if (state && state.inventory && Array.isArray(state.inventory)) {
+            state.inventory.forEach(el => {
+                if (el && el.name) allElements.add(el.name);
+            });
+        }
+        
+        const options = Array.from(allElements).sort();
+        
+        // Save current selection
+        const val1 = mix1.value;
+        const val2 = mix2.value;
+        
+        // Rebuild options
+        mix1.innerHTML = '<option value="">-- Ingredient 1 --</option>';
+        mix2.innerHTML = '<option value="">-- Ingredient 2 --</option>';
+        
+        options.forEach(name => {
+            mix1.add(new Option(name, name));
+            mix2.add(new Option(name, name));
+        });
+        
+        // Restore selection
+        mix1.value = val1;
+        mix2.value = val2;
+    }
+
+    async function adminCreateElement() {
+        adminSetError('');
+        const name = (document.getElementById('adminElementName')?.value || '').trim();
+        const emoji = (document.getElementById('adminElementEmoji')?.value || '').trim();
+        const rarity = document.getElementById('adminElementRarity')?.value || 'normal';
+        const flavor = (document.getElementById('adminElementFlavor')?.value || '').trim();
+        const mix1 = document.getElementById('adminElementMix1')?.value || '';
+        const mix2 = document.getElementById('adminElementMix2')?.value || '';
+        
+        if (!name) { adminSetError('Element name required'); return; }
+        if (!emoji) { adminSetError('Emoji required'); return; }
+        
+        const newElement = { name, emoji, rarity };
+        if (flavor) newElement.flavor = flavor;
+        
+        // Add to INITIAL_ELEMENTS if not already there
+        const existingIdx = INITIAL_ELEMENTS.findIndex(e => e.name.toLowerCase() === name.toLowerCase());
+        if (existingIdx === -1) {
+            INITIAL_ELEMENTS.push(newElement);
+        } else {
+            INITIAL_ELEMENTS[existingIdx] = newElement;
+        }
+        
+        // Add recipe if both ingredients selected
+        if (mix1 && mix2 && mix1 !== '' && mix2 !== '' && mix1 !== mix2) {
+            const key = [mix1, mix2].sort().join('+');
+            RECIPES[key] = newElement;
+        }
+        
+        showToast(`Element "${name}" created!`);
+        adminClearElementForm();
+        populateElementMixDropdowns();
+        adminLoadElements();
+        renderInventory();
+    }
+
+    function adminClearElementForm() {
+        const ids = ['adminElementName', 'adminElementEmoji', 'adminElementFlavor'];
+        ids.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        const rarity = document.getElementById('adminElementRarity');
+        if (rarity) rarity.value = 'normal';
+        const mix1 = document.getElementById('adminElementMix1');
+        const mix2 = document.getElementById('adminElementMix2');
+        if (mix1) mix1.value = '';
+        if (mix2) mix2.value = '';
+    }
+
+    function adminLoadElements() {
+        const list = document.getElementById('adminElementsList');
+        if (!list) return;
+        
+        const allElements = [...INITIAL_ELEMENTS, ...Object.values(RECIPES)];
+        const uniqueElements = [];
+        const seen = new Set();
+        
+        allElements.forEach(el => {
+            if (el && el.name && !seen.has(el.name.toLowerCase())) {
+                seen.add(el.name.toLowerCase());
+                uniqueElements.push(el);
+            }
+        });
+        
+        list.innerHTML = '';
+        uniqueElements.sort((a, b) => a.name.localeCompare(b.name)).forEach(el => {
+            const row = document.createElement('div');
+            row.className = 'flex items-center justify-between px-2 py-1 rounded bg-black/30';
+            row.innerHTML = `
+                <div class="flex items-center gap-2">
+                    <span class="text-lg">${el.emoji}</span>
+                    <div class="flex flex-col">
+                        <span class="text-[11px] font-semibold">${escapeHtml(el.name)}</span>
+                        <span class="text-[9px] text-white/50">${el.rarity}</span>
+                    </div>
+                </div>
+            `;
+            list.appendChild(row);
+        });
     }
 
     async function adminSetAnnouncement() {
@@ -3742,9 +4171,14 @@
 
     function openLeaderboard() {
         loadPlayers();
-        // try to show global board if Firebase works
-        refreshGlobalPlayers().then(() => renderLeaderboard()).catch(() => {});
-        renderLeaderboard();
+        const listEl = document.getElementById('leaderboardList');
+        if (listEl) listEl.innerHTML = '<p class="text-[11px] text-slate-400 py-2 text-center">Loading...</p>';
+        // Load from Firebase first, then render
+        refreshGlobalPlayers().then(() => {
+            renderLeaderboard();
+        }).catch(() => {
+            renderLeaderboard();
+        });
         document.getElementById('leaderboardOverlay').classList.remove('hidden');
     }
 
@@ -3764,32 +4198,205 @@
         const filtered = search
             ? data.filter(p => (p.name || '').toLowerCase().includes(search) || (p.displayName || '').toLowerCase().includes(search) || (p.username || '').toLowerCase().includes(search))
             : data;
-        if (!filtered.length) {
-            listEl.innerHTML = '<p class="text-[11px] text-slate-400 py-2 text-center">No players yet.</p>';
-            return;
-        }
-        listEl.innerHTML = '';
-        filtered.forEach((p, index) => {
-            const mins = Math.floor((p.playTimeMs || 0) / 60000);
-            const row = document.createElement('div');
-            row.className = 'flex items-center justify-between px-2 py-1.5 rounded-xl hover:bg-slate-50';
-            row.innerHTML = `
-                <div class="flex items-center gap-2">
-                    <span class="w-5 text-[11px] font-black text-slate-400">${index + 1}</span>
-                    <div class="flex flex-col">
-                        <span class="text-[11px] font-semibold text-slate-800">${p.name}</span>
-                        <span class="text-[10px] text-slate-400">Time: ${mins}m</span>
+            if (!filtered.length) {
+                listEl.innerHTML = '<p class="text-[11px] text-slate-400 py-2 text-center">No players yet.</p>';
+                return;
+            }
+            listEl.innerHTML = '';
+            filtered.forEach((p, index) => {
+                const mins = Math.floor((p.playTimeMs || 0) / 60000);
+                const row = document.createElement('div');
+                row.className = 'flex items-center justify-between px-2 py-1.5 rounded-xl hover:bg-slate-50';
+                row.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <span class="w-5 text-[11px] font-black text-slate-400">${index + 1}</span>
+                        <div class="flex flex-col">
+                            <span class="text-[11px] font-semibold text-slate-800">${p.name}</span>
+                            <span class="text-[10px] text-slate-400">Time: ${mins}m</span>
+                        </div>
                     </div>
-                </div>
-                <div class="text-right">
-                    <span class="block text-[11px] font-bold text-amber-600">${(p.coins || 0).toLocaleString()}c</span>
-                </div>
-            `;
-            listEl.appendChild(row);
-        });
-    }
+                    <div class="text-right">
+                        <span class="block text-[11px] font-bold text-amber-600">${(p.coins || 0).toLocaleString()}c</span>
+                    </div>
+                `;
+                listEl.appendChild(row);
+            });
+        }
 
-    window.onload = init;
-</script>
-</body>
-</html>
+        // ==================== MINI GAMES SYSTEM ====================
+        let currentGameType = null;
+        let currentGameId = null;
+
+        function showGameOnRight(gameType) {
+            currentGameType = gameType;
+            const titleEl = document.getElementById('miniGameTitle');
+            const contentEl = document.getElementById('miniGameContent');
+            const subtitleEl = document.getElementById('miniGameSubtitle');
+            if (!titleEl || !contentEl) return;
+            showMiniGameScreen(true);
+            if (gameType === 'guess') {
+                titleEl.textContent = 'Guess Game';
+                subtitleEl.textContent = 'Bet on Yes/No outcomes';
+                renderGuessGameList();
+            } else if (gameType === 'blackjack') {
+                titleEl.textContent = 'Blackjack';
+                subtitleEl.textContent = 'Play vs Bot or Real Players';
+                renderBlackjackMenu();
+            }
+            lucide.createIcons();
+        }
+
+        function renderGuessGameList() {
+            const contentEl = document.getElementById('miniGameContent');
+            if (!contentEl) return;
+            contentEl.innerHTML = `<div class="space-y-3"><p class="text-[11px] text-slate-400">Select a guess game:</p><div id="guessGamesList" class="space-y-2"><p class="text-[11px] text-slate-500">Loading...</p></div></div>`;
+            loadGuessGamesForRightPanel();
+        }
+
+        async function loadGuessGamesForRightPanel() {
+            if (!window._hcDb || !window._hcDbFns) return;
+            const { ref, get } = window._hcDbFns;
+            const listEl = document.getElementById('guessGamesList');
+            if (!listEl) return;
+            try {
+                const snap = await get(ref(window._hcDb, 'guessGames'));
+                if (!snap.exists()) { listEl.innerHTML = '<p class="text-[11px] text-slate-500">No games.</p>'; return; }
+                const val = snap.val() || {};
+                const games = Object.values(val).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                listEl.innerHTML = '';
+                games.forEach(g => {
+                    const active = isGuessGameActive(g);
+                    const totalYes = Number(g.yesTotal || 0);
+                    const totalNo = Number(g.noTotal || 0);
+                    const total = totalYes + totalNo;
+                    const yesPercent = total > 0 ? Math.round((totalYes / total) * 100) : 0;
+                    const noPercent = total > 0 ? Math.round((totalNo / total) * 100) : 0;
+                    const btn = document.createElement('button');
+                    btn.className = 'w-full text-left p-3 rounded-2xl border ' + (active ? 'bg-slate-900 border-slate-700 hover:bg-slate-800' : 'bg-slate-900/50 border-slate-800 opacity-70');
+                    btn.innerHTML = `<div class="flex justify-between"><span class="font-semibold text-[12px]">${escapeHtml(g.title || 'Untitled')}</span><span class="text-[10px] ${active ? 'text-emerald-400' : 'text-slate-500'}">${active ? 'Active' : 'Closed'}</span></div><p class="text-[10px] text-slate-400 mt-1 truncate">${escapeHtml(g.description || '')}</p><div class="flex gap-3 mt-2 text-[10px]"><span class="text-emerald-400">Yes: ${yesPercent}%</span><span class="text-rose-400">No: ${noPercent}%</span></div>`;
+                    btn.onclick = () => openGuessGameDetail(g.id);
+                    listEl.appendChild(btn);
+                });
+            } catch (e) { listEl.innerHTML = '<p class="text-[11px] text-rose-400">Failed.</p>'; }
+        }
+
+        async function openGuessGameDetail(gameId) {
+            currentGameId = gameId;
+            if (!window._hcDb || !window._hcDbFns) return;
+            const { ref, get } = window._hcDbFns;
+            const contentEl = document.getElementById('miniGameContent');
+            const subtitleEl = document.getElementById('miniGameSubtitle');
+            try {
+                const snap = await get(ref(window._hcDb, `guessGames/${gameId}`));
+                if (!snap.exists()) return;
+                const g = snap.val();
+                const active = isGuessGameActive(g);
+                if (subtitleEl) subtitleEl.textContent = g.title || 'Guess';
+                let myBetHtml = '';
+                if (currentPlayer) {
+                    try {
+                        const betSnap = await get(ref(window._hcDb, `guessBets/${gameId}/${currentPlayer.id}`));
+                        if (betSnap.exists()) {
+                            const b = betSnap.val();
+                            myBetHtml = `<p class="text-[11px]">Your bet: <span class="${b.side === 'yes' ? 'text-emerald-400' : 'text-rose-400'}">${b.side.toUpperCase()}</span> ${b.amount}c</p>`;
+                        }
+                    } catch (_) {}
+                }
+                contentEl.innerHTML = `<div class="space-y-4"><button onclick="renderGuessGameList()" class="text-[11px] text-slate-400 hover:text-white">← Back</button>${g.imageUrl ? `<img src="${escapeHtml(g.imageUrl)}" class="w-full max-h-48 rounded-xl" />` : ''}<div><h2 class="text-sm font-bold">${escapeHtml(g.title || 'Untitled')}</h2><p class="text-[11px] text-slate-400">${escapeHtml(g.description || '')}</p></div>${myBetHtml}${active ? `<div class="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-2"><input id="guessBetAmount" type="number" min="1" placeholder="Amount" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-[11px]"><div class="flex gap-2"><button onclick="placeGuessBetFromRight('${gameId}','yes')" class="flex-1 py-2 rounded-lg bg-emerald-600 text-[11px]">Bet Yes</button><button onclick="placeGuessBetFromRight('${gameId}','no')" class="flex-1 py-2 rounded-lg bg-rose-600 text-[11px]">Bet No</button></div></div>` : '<p class="text-[11px] text-slate-500 text-center">Closed</p>'}</div>`;
+            } catch (e) {}
+        }
+
+        async function placeGuessBetFromRight(gameId, side) {
+            if (!currentPlayer) { showToast('Log in'); return; }
+            const amt = Number(document.getElementById('guessBetAmount')?.value || 0);
+            if (!amt || amt <= 0) { showToast('Enter amount'); return; }
+            if (amt > state.coins) { showToast('Not enough'); return; }
+            await placeGuessBet(gameId, side, amt);
+            openGuessGameDetail(gameId);
+        }
+
+        // Password Reset
+        function openResetPasswordOverlay() {
+            const el = document.getElementById('resetPasswordOverlay');
+            if (el) {
+                el.classList.remove('hidden');
+                document.getElementById('resetCurrentPasswordInput').value = '';
+                document.getElementById('resetNewPasswordInput').value = '';
+                document.getElementById('resetConfirmPasswordInput').value = '';
+                document.getElementById('resetPasswordError').textContent = '';
+            }
+        }
+        function closeResetPasswordOverlay() {
+            const el = document.getElementById('resetPasswordOverlay');
+            if (el) el.classList.add('hidden');
+        }
+        async function submitResetPassword() {
+            if (!currentPlayer) { showToast('Not logged in'); return; }
+            if (!window._hcDb || !window._hcDbFns) { showToast('Firebase not ready'); return; }
+            const curPass = document.getElementById('resetCurrentPasswordInput').value;
+            const newPass = document.getElementById('resetNewPasswordInput').value;
+            const confPass = document.getElementById('resetConfirmPasswordInput').value;
+            const errEl = document.getElementById('resetPasswordError');
+            if (!curPass || !newPass || !confPass) { errEl.textContent = 'All fields required'; return; }
+            if (newPass.length < 4) { errEl.textContent = 'Min 4 chars'; return; }
+            if (newPass !== confPass) { errEl.textContent = 'Passwords dont match'; return; }
+            const { ref, get, update } = window._hcDbFns;
+            try {
+                const snap = await get(ref(window._hcDb, `players/${currentPlayer.id}`));
+                if (!snap.exists()) { errEl.textContent = 'User not found'; return; }
+                const data = snap.val();
+                if (data.password !== curPass) { errEl.textContent = 'Wrong password'; return; }
+                await update(ref(window._hcDb, `players/${currentPlayer.id}`), { password: newPass });
+                currentPlayer.password = newPass;
+                savePlayers();
+                showToast('Password updated');
+                closeResetPasswordOverlay();
+            } catch (e) { errEl.textContent = 'Failed'; }
+        }
+
+        // Blackjack
+        let blackjackGame = null;
+        function renderBlackjackMenu() {
+            const el = document.getElementById('miniGameContent');
+            if (!el) return;
+            el.innerHTML = `<div class="space-y-4"><div class="p-4 rounded-2xl bg-slate-900 border border-slate-800 text-center"><h3 class="text-lg font-bold mb-2">🃏 Blackjack</h3><p class="text-[11px] text-slate-400 mb-4">Get close to 21!</p><div class="grid grid-cols-2 gap-3"><button onclick="startBlackjackVsBot()" class="p-3 rounded-xl bg-emerald-600 text-[11px]">vs Bot</button><button onclick="showBlackjackMultiplayer()" class="p-3 rounded-xl bg-indigo-600 text-[11px]">vs Player</button></div></div></div>`;
+        }
+        function getCardValue(c) { if (['J','Q','K'].includes(c.value)) return 10; if (c.value === 'A') return 11; return parseInt(c.value); }
+        function calculateHand(h) { let s=0, a=0; h.forEach(c=>{s+=getCardValue(c);if(c.value==='A')a++}); while(s>21&&a>0){s-=10;a--} return s; }
+        function createDeck() { const suits=['♠','♥','♦','♣'], vals=['2','3','4','5','6','7','8','9','10','J','Q','K','A']; const d=[]; suits.forEach(s=>vals.forEach(v=>d.push({suit:s,value:v,color:(s==='♥'||s==='♦')?'text-rose-400':'text-slate-300'}))); return d.sort(()=>Math.random()-0.5); }
+        function renderCard(c) { return `<div class="inline-flex w-10 h-14 bg-white rounded-lg border-2 border-slate-300 ${c.color} font-bold text-lg mx-0.5 items-center justify-center">${c.value}${c.suit}</div>`; }
+        function startBlackjackVsBot() { const d=createDeck(); blackjackGame={deck:d,playerHand:[d.pop(),d.pop()],dealerHand:[d.pop(),d.pop()],bet:0,phase:'betting'}; renderBlackjackGame(); }
+        function renderBlackjackGame() {
+            const el=document.getElementById('miniGameContent'); if(!el||!blackjackGame) return;
+            const ps=calculateHand(blackjackGame.playerHand), ds=calculateHand(blackjackGame.dealerHand);
+            if(blackjackGame.phase==='betting'){el.innerHTML=`<div class="space-y-4 text-center"><p class="text-[12px] text-slate-400">Bet amount</p><input id="bjBet" type="number" min="1" max="${state.coins}" placeholder="Bet" class="w-40 px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-center"><p class="text-[10px]">Bal: ${state.coins}c</p><button onclick="placeBJBet()" class="px-6 py-2 rounded-xl bg-emerald-600">Bet</button></div>`;}
+            else { const over=blackjackGame.phase==='ended'; el.innerHTML=`<div class="space-y-4"><div class="p-3 rounded-xl bg-slate-900 border border-slate-800"><p class="text-[10px] text-slate-500">Dealer (${over?ds:'?'})</p><div class="flex">${blackjackGame.dealerHand.map((c,i)=>(i===1&&!over)?'<div class="w-10 h-14 bg-slate-700 rounded-lg border-2 border-slate-600 mx-0.5 flex items-center justify-center text-slate-500">?</div>':renderCard(c)).join('')}</div></div><div class="p-3 rounded-xl bg-slate-900 border border-slate-800"><p class="text-[10px] text-slate-500">You (${ps})</p><div class="flex">${blackjackGame.playerHand.map(c=>renderCard(c)).join('')}</div>${ps>21?'<p class="text-rose-400 font-bold">BUST!</p>':''}</div><div class="text-center"><p class="font-bold">Bet: ${blackjackGame.bet}c</p>${!over&&ps<=21?`<div class="flex justify-center gap-2"><button onclick="bjHit()" class="px-4 py-2 rounded-lg bg-emerald-600">Hit</button><button onclick="bjStand()" class="px-4 py-2 rounded-lg bg-rose-600">Stand</button></div>`:over?`<p class="font-bold">${bjResult()}</p><button onclick="startBlackjackVsBot()" class="px-4 py-2 rounded-lg bg-indigo-600">Again</button>`:''}</div></div>`; }
+        }
+        function placeBJBet(){const amt=Number(document.getElementById('bjBet')?.value||0);if(!amt||amt<=0){showToast('Enter bet');return;}if(amt>state.coins){showToast('No coins');return;}blackjackGame.bet=amt;state.coins-=amt;blackjackGame.phase='playing';updateUI();renderBlackjackGame();if(calculateHand(blackjackGame.playerHand)===21){showToast('Blackjack!');bjStand();}}
+        function bjHit(){blackjackGame.playerHand.push(blackjackGame.deck.pop());renderBlackjackGame();if(calculateHand(blackjackGame.playerHand)>21)endBJ(false);}
+        function bjStand(){while(calculateHand(blackjackGame.dealerHand)<17)blackjackGame.dealerHand.push(blackjackGame.deck.pop());const ps=calculateHand(blackjackGame.playerHand),ds=calculateHand(blackjackGame.dealerHand);endBJ(ps<=21&&(ds>21||ps>ds));}
+        function endBJ(win){blackjackGame.phase='ended';if(win){state.coins+=blackjackGame.bet*2;showToast(`Won ${blackjackGame.bet*2}c`);}else{showToast(`Lost ${blackjackGame.bet}c`);}updateUI();renderBlackjackGame();}
+        function bjResult(){const ps=calculateHand(blackjackGame.playerHand),ds=calculateHand(blackjackGame.dealerHand);if(ps>21)return'Bust! Lose';if(ds>21)return'Dealer Bust! Win';if(ps>ds)return'Win!';if(ds>ps)return'Lose';return'Tie';}
+
+        // Multiplayer Fight
+        let fightReqUnsub=null,curFightReq=null;
+        function showBlackjackMultiplayer(){const el=document.getElementById('miniGameContent');if(!el)return;el.innerHTML=`<div class="space-y-4"><div class="p-4 rounded-2xl bg-slate-900 border border-slate-800"><h3 class="text-sm font-bold">Online</h3><div id="onlineList" class="space-y-2 max-h-48 overflow-y-auto"><p class="text-[11px]">Loading...</p></div></div></div>`;loadOnline();}
+        async function loadOnline(){if(!window._hcDb||!window._hcDbFns||!currentPlayer)return;const{ref,get}=window._hcDbFns;try{const snap=await get(ref(window._hcDb,'players'));const el=document.getElementById('onlineList');if(!snap.exists()||!el){if(el)el.innerHTML='<p class="text-[11px]">None</p>';return;}const val=snap.val(),now=Date.now();const on=Object.values(val).filter(p=>p.id!==currentPlayer.id&&p.lastSeen&&(now-p.lastSeen)<300000);if(!on.length){el.innerHTML='<p class="text-[11px]">None online</p>';return;}el.innerHTML='';on.forEach(p=>{const row=document.createElement('div');row.className='flex justify-between p-2 rounded-lg bg-slate-800';row.innerHTML=`<div><p class="text-[11px]">${escapeHtml(p.displayName||p.name)}</p></div><button onclick="sendFightReq('${p.id}')" class="px-3 py-1 rounded-lg bg-rose-600 text-[10px]">Fight</button>`;el.appendChild(row);});}catch(e){}}
+        async function sendFightReq(tuid){if(!currentPlayer||!window._hcDb||!window._hcDbFns)return;const{ref,set,push}=window._hcDbFns;try{const r=push(ref(window._hcDb,'fightRequests'));await set(r,{fromUid:currentPlayer.id,fromName:currentPlayer.displayName||currentPlayer.name,toUid:tuid,game:'blackjack',status:'pending',createdAt:Date.now()});showToast('Sent!');}catch(e){showToast('Failed');}}
+        function listenFights(){if(!currentPlayer||!window._hcDb||!window._hcDbFns)return;const{ref,query,orderByChild,equalTo,onValue,off}=window._hcDbFns;const q=query(ref(window._hcDb,'fightRequests'),orderByChild('toUid'),equalTo(currentPlayer.id));if(fightReqUnsub)fightReqUnsub();const h=(snap)=>{if(!snap.exists())return;const val=snap.val()||{};const reqs=Object.entries(val).filter(([_,r])=>r.status==='pending'&&Date.now()-r.createdAt<60000);if(reqs.length){const[rid,r]=reqs[0];curFightReq={id:rid,...r};const m=document.getElementById('fightRequestModal'),msg=document.getElementById('fightMessage');if(m&&msg){msg.textContent=`${r.fromName} wants to play!`;m.classList.remove('hidden');}}};onValue(q,h,()=>{});fightReqUnsub=()=>off(q,'value',h);}
+        async function acceptFight(){if(!curFightReq||!window._hcDb||!window._hcDbFns)return;const{ref,update}=window._hcDbFns;await update(ref(window._hcDb,`fightRequests/${curFightReq.id}`),{status:'accepted'});document.getElementById('fightRequestModal').classList.add('hidden');showToast('Accepted!');switchTab('minigames');showGameOnRight('blackjack');startBlackjackVsBot();}
+        async function declineFight(){if(!curFightReq||!window._hcDb||!window._hcDbFns)return;const{ref,update}=window._hcDbFns;await update(ref(window._hcDb,`fightRequests/${curFightReq.id}`),{status:'declined'});document.getElementById('fightRequestModal').classList.add('hidden');curFightReq=null;}
+
+        // Guess Results
+        let guessResUnsub=null;
+        function listenGuessRes(){if(!currentPlayer||!window._hcDb||!window._hcDbFns)return;const{ref,onValue,off}=window._hcDbFns;const r=ref(window._hcDb,`playerNotifications/${currentPlayer.id}/guessResults`);if(guessResUnsub)guessResUnsub();const h=(snap)=>{if(!snap.exists())return;const val=snap.val()||{};Object.values(val).filter(x=>!x.seen).forEach(x=>{if(x.type==='win')showToast(`🎉 Won ${x.amount}c!`);else if(x.type==='loss')showToast(`😔 Lost ${x.amount}c`);else if(x.type==='refund')showToast(`💰 Refund ${x.amount}c`);markSeen(x.id);});};onValue(r,h,()=>{});guessResUnsub=()=>off(r,'value',h);}
+        async function markSeen(rid){if(!currentPlayer||!window._hcDb||!window._hcDbFns)return;const{ref,update}=window._hcDbFns;await update(ref(window._hcDb,`playerNotifications/${currentPlayer.id}/guessResults/${rid}`),{seen:true});}
+
+        // Hook into init
+        const origInit=init;
+        init=function(){origInit();listenFights();listenGuessRes();};
+
+        window.onload = init;
+    </script>
+    </body>
+    </html>
